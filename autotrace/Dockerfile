@@ -20,4 +20,13 @@ RUN ./autogen.sh && \
     make && \
     make check
 
+ENV PYTHONUNBUFFERED=1
+
 COPY ./app /app
+EXPOSE 8000
+
+# Note this avoids the nice auto tuning features of this image
+# todo: go back and figure out how to get that working w ctrl-c?,
+# and accessing across networks (kept on getting refused to connect)
+WORKDIR /app
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
