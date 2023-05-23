@@ -1,4 +1,5 @@
 import subprocess
+import os
 from fastapi import Form, File, UploadFile, FastAPI, Request
 from fastapi.responses import FileResponse
 from typing import Optional
@@ -172,7 +173,6 @@ async def autotrace(
         if variable_name.startswith('-'):
             variable_name = variable_name.lstrip('-').replace('-', '_')
 
-        print("\n\t", variable_name, str(the_type), the_type.__name__)
         # Check if the variable name exists in the annotations
         if variable_name in annotations:
             variable_type = str(annotations[variable_name])
@@ -217,8 +217,6 @@ async def autotrace(
     # postpend with input file
     command.append(make_input_file(INPUT_FILE))
 
-    print("\tCommand is: ", command, )
-
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
@@ -228,10 +226,15 @@ async def autotrace(
     output, error = process.communicate()
 
     if 0 == process.returncode:
+        the_user_filename= os.path.splitext(a_file.filename)[0]
+        the_extension = form_data[OUTPUT_FORMAT_KEY]
+        if 'svg' in the_extension:
+            the_extension += '+xml'
+
         return FileResponse(
             the_postfixed_parameters[OUTPUT_FILE],
-            filename=a_file.filename+".svg",
-            media_type="image/png"
+            filename=the_user_filename + '.' + the_extension,
+            media_type="image/" + the_extension
         )
     
     return {
