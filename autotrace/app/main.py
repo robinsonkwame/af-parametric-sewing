@@ -4,9 +4,12 @@ from fastapi.responses import FileResponse
 from typing import Optional
 from uuid import uuid4
 from datetime import datetime
-from copy import deepcopy
+
 
 AUTOTRACE_COMMAND = '/autotrace/autotrace'
+A_FILE_PARAM = 'a_file'
+STORAGE_DIR = '/tmp/'
+OUTPUT_FILE = '-output-file'
 OUTPUT_FORMAT_KEY = '-output-format'
 INPUT_FORMAT_KEY = '-input-format'
 
@@ -23,12 +26,12 @@ async def autotrace(
         alias="-background-color", 
         description=" <hexadecimal>;  the color of the background that should be ignored, for example FFFFFF; default is no background color."
     ),
-    centerline: Optional[str] = Form(
+    centerline: Optional[bool] = Form(
         None,
         alias="-centerline",
         description="trace a character's centerline, rather than its outline."
     ),
-    charcode: Optional[str] = Form(
+    charcode: Optional[int] = Form(
         None,
         alias="-charcode", 
         description=" <unsigned>;  code of character to load from GF font file."
@@ -63,7 +66,7 @@ async def autotrace(
         alias="-despeckle-tightness", 
         description=" <real>;  0.0..8.0; default is 2.0."
     ),
-    dpi: Optional[str] = Form(
+    dpi: Optional[int] = Form(
         None,
         alias="-dpi", 
         description=" <unsigned>;  The dots per inch value in the input image, affects scaling of mif output image"
@@ -83,7 +86,7 @@ async def autotrace(
         alias="-input-format",
         description="Available formats;  ppm, png, pbm, pnm, bmp, tga, pgm, gf."
     ),
-    help: Optional[str] = Form(
+    help: Optional[bool] = Form(
         None,
         alias="-help",
         description="print this message."
@@ -98,17 +101,17 @@ async def autotrace(
         alias="-line-threshold",
         description=" <real>;  if the spline is not more than this far away from the straight line defined by its endpoints, then output a straight line; default is 1."
     ),
-    list_output_formats: Optional[str] = Form(
+    list_output_formats: Optional[bool] = Form(
         None,
         alias="-list-output-formats",
         description="print a list of supported output formats to stderr."
     ),
-    list_input_formats: Optional[str] = Form(
+    list_input_formats: Optional[bool] = Form(
         None,
         alias="-list-input-formats",
         description="print a list of supported input formats to stderr."
     ),
-    log: Optional[str] = Form(
+    log: Optional[bool] = Form(
         None,
         alias="-log", 
         description="write detailed progress reports to <input_name>.log."
@@ -133,7 +136,7 @@ async def autotrace(
         alias="-preserve-width",
         description="preserve line width prior to thinning."
     ),
-    remove_adjacent_corners: Optional[str] = Form(
+    remove_adjacent_corners: Optional[bool] = Form(
         None,
         alias="-remove-adjacent-corners",
         description="remove corners that are adjacent."
@@ -143,7 +146,7 @@ async def autotrace(
         alias="-tangent-surround", 
         description=" <unsigned>;  number of points on either side of a point to consider when computing the tangent at that point; default is 3."
     ),
-    version: Optional[str] = Form(
+    version: Optional[bool] = Form(
         None,
         alias="-version",
         description="print the version number of this program."
@@ -154,81 +157,85 @@ async def autotrace(
         description=" <real>;  weight factor for fitting the linewidth."
     )):
 
+    def make_input_file(file_name):
+        return STORAGE_DIR+file_name+'.'+form_data[INPUT_FORMAT_KEY]
+    def make_output_file(file_name):
+        return STORAGE_DIR+file_name+'.'+form_data[OUTPUT_FORMAT_KEY]
+
+    def check_variable_type(annotations, variable_name, the_type):
+        """
+        Use function variable type hints to help loosely type request
+        string variables. Mainly used to cast indicator variables, e.g.
+        `-centerline` vs `-centerline=True`
+        """
+        # Check if the variable name is an alias with '-' separators
+        if variable_name.startswith('-'):
+            variable_name = variable_name.lstrip('-').replace('-', '_')
+
+        print("\n\t", variable_name, str(the_type), the_type.__name__)
+        # Check if the variable name exists in the annotations
+        if variable_name in annotations:
+            variable_type = str(annotations[variable_name])
+            return the_type.__name__ in variable_type
+
+        return None
+
+
+    annotations = autotrace.__annotations__ # can this be const, moved outside?
     form_data = await request.form()
 
-    the_postfixed_parameters = {} # we'll copy from request directly, instead of deepcopy that throws a recursion error
+    INPUT_FILE = f"{uuid4().hex}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    the_postfixed_parameters = {} 
 
     # Generate a random file name using UUID and current time
-    if not output_file:
-        output_file =  f"{uuid4().hex}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        the_postfixed_parameters['input'] = f"/tmp/{output_file}" + '.'+form_data[INPUT_FORMAT_KEY]
-        the_postfixed_parameters['output'] = f"/tmp/{output_file}" + '.'+form_data[OUTPUT_FORMAT_KEY]
+    the_postfixed_parameters[OUTPUT_FILE] = make_output_file(INPUT_FILE)
 
-        # Save the uploaded file to disk
-        with open(the_postfixed_parameters['input'], "wb") as f:
-            f.write(await a_file.read())
+    # Save the uploaded file to disk
+    with open(make_input_file(INPUT_FILE), "wb") as f:
+        f.write(await a_file.read())
     
     # Build the command to call autotrace
     command = ["/autotrace/autotrace"]
     
-    for key, value in form_data.items():
-        if value and key not in the_postfixed_parameters:
-            command.append(f"{key}={value}")
+    the_autotrace_parameters = {
+        key: value for key, value in form_data.items() if key != A_FILE_PARAM
+    }
 
-    # Add non-empty postfixed arguments
+    for key, value in the_autotrace_parameters.items():
+        if value and key not in the_postfixed_parameters:
+            add_this_parameter = f"{key}={value}"
+            if check_variable_type(annotations, key, bool):
+                add_this_parameter = f"{key}" # flag or indicator variable
+            command.append(add_this_parameter)
+
+    # Add call dependent arguments, mainly randomized filenames
     for key, value in the_postfixed_parameters.items():
         if value:
             command.append(f"{key}={value}")
 
-    result = subprocess.run(
+    # postpend with input file
+    command.append(make_input_file(INPUT_FILE))
+
+    print("\tCommand is: ", command, )
+
+    process = subprocess.Popen(
         command,
-        shell=True,
         stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True
     )
-    stdout = result.stdout
+    output, error = process.communicate()
 
-    return {"the_command": ' '.join(command),
-            "stdout": stdout}
-
-    # # Read the output file generated by autotrace
-    # output_filename = f"{filename}.{output_format}"
-    # with open(output_filename, "r") as f:
-    #     output = f.read()
-    #     # shoudl we remove this file?
+    if 0 == process.returncode:
+        return FileResponse(
+            the_postfixed_parameters[OUTPUT_FILE],
+            filename=a_file.filename+".svg",
+            media_type="image/png"
+        )
     
-    # # Return the output file content as a response
-    # return {"filename": output_filename, "content": output}
-
-    # form_data = await request.form()
-
-    # if not output_file:
-    #     output_file =  f"{uuid.uuid4().hex}_{int(time.time())}.png"
-    # the_autotrace_output = f"/tmp/{output_file}"
-
-
-
-    # the_arguments =\
-    #     [f"{key}={value}"
-    #         for key, value in form_data.items() if value
-    # ]
-
-    # # subprocess.run(["path/to/binary_program", "arg1", "arg2"])
-    # #return FileResponse(the_autotrace_output, media_type="image/png")
-    # result = subprocess.run(
-    #     ['/autotrace/autotrace'] + the_arguments,
-    #     shell=True,
-    #     stdout=subprocess.PIPE,
-    #     text=True
-    # )
-    # stdout = result.stdout
-
-    # return {
-    #     'stdout': stdout,
-    #     'args': the_arguments
-    # }
-
-    # return {
-    #     "background_color": background_color,
-    #     "filename": a_file.filename
-    # }
+    return {
+        "returncode": process.returncode,
+        "reason": output + " " + error,
+        "command": " ".join(command)
+    }
