@@ -6,6 +6,6 @@ export USE_GPU=True
 echo "... building ${SB3}"
 ./scripts/build_docker.sh
 
-echo "... removing ${SB3} repository. Use 'docker run --rm ${SB3}' to launch."
 cd ..
-rm -rf $SB3
+echo "... Use ./run_pref_demo.sh to run a demo using stablebaseline3"
+
