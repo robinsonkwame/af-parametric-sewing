@@ -1,63 +1,73 @@
-#from https://imitation.readthedocs.io/en/latest/algorithms/preference_comparisons.html
-import numpy as np
+"""This is a simple example demonstrating how to clone the behavior of an expert.
 
+Refer to the jupyter notebooks for more detailed examples of how to use the algorithms.
+"""
+import gym
+import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.ppo import MlpPolicy
 
-from imitation.algorithms import preference_comparisons
-from imitation.policies.base import FeedForward32Policy, NormalizeFeaturesExtractor
-from imitation.rewards.reward_nets import BasicRewardNet
-from imitation.rewards.reward_wrapper import RewardVecEnvWrapper
-from imitation.util.networks import RunningNorm
-from imitation.util.util import make_vec_env
+from imitation.algorithms import bc
+from imitation.data import rollout
+from imitation.data.wrappers import RolloutInfoWrapper
 
+env = gym.make("CartPole-v1")
 rng = np.random.default_rng(0)
 
-venv = make_vec_env("Pendulum-v1", rng=rng)
+def train_expert():
+    print("Training a expert.")
+    expert = PPO(
+        policy=MlpPolicy,
+        env=env,
+        seed=0,
+        batch_size=64,
+        ent_coef=0.0,
+        learning_rate=0.0003,
+        n_epochs=10,
+        n_steps=64,
+    )
+    expert.learn(100)  # Note: change this to 100000 to train a decent expert.
+    return expert
 
-reward_net = BasicRewardNet(
-    venv.observation_space, venv.action_space, normalize_input_layer=RunningNorm,
-)
 
-fragmenter = preference_comparisons.RandomFragmenter(warning_threshold=0, rng=rng)
-gatherer = preference_comparisons.SyntheticGatherer(rng=rng)
-preference_model = preference_comparisons.PreferenceModel(reward_net)
-reward_trainer = preference_comparisons.BasicRewardTrainer(
-    preference_model=preference_model,
-    loss=preference_comparisons.CrossEntropyRewardLoss(),
-    epochs=3,
+def sample_expert_transitions():
+    expert = train_expert()
+
+    print("Sampling expert transitions.")
+    rollouts = rollout.rollout(
+        expert,
+        DummyVecEnv([lambda: RolloutInfoWrapper(env)]),
+        rollout.make_sample_until(min_timesteps=None, min_episodes=50),
+        rng=rng,
+    )
+    return rollout.flatten_trajectories(rollouts)
+
+
+transitions = sample_expert_transitions()
+bc_trainer = bc.BC(
+    observation_space=env.observation_space,
+    action_space=env.action_space,
+    demonstrations=transitions,
     rng=rng,
 )
 
-agent = PPO(
-    policy=FeedForward32Policy,
-    policy_kwargs=dict(
-        features_extractor_class=NormalizeFeaturesExtractor,
-        features_extractor_kwargs=dict(normalize_class=RunningNorm),
-    ),
-    env=venv,
-    n_steps=2048 // venv.num_envs,
+reward, _ = evaluate_policy(
+    bc_trainer.policy,  # type: ignore[arg-type]
+    env,
+    n_eval_episodes=3,
+    render=True,
 )
+print(f"Reward before training: {reward}")
 
-trajectory_generator = preference_comparisons.AgentTrainer(
-    algorithm=agent,
-    reward_fn=reward_net,
-    venv=venv,
-    exploration_frac=0.0,
-    rng=rng,
+print("Training a policy using Behavior Cloning")
+bc_trainer.train(n_epochs=1)
+
+reward, _ = evaluate_policy(
+    bc_trainer.policy,  # type: ignore[arg-type]
+    env,
+    n_eval_episodes=3,
+    render=True,
 )
-
-pref_comparisons = preference_comparisons.PreferenceComparisons(
-    trajectory_generator,
-    reward_net,
-    num_iterations=5,
-    fragmenter=fragmenter,
-    preference_gatherer=gatherer,
-    reward_trainer=reward_trainer,
-    initial_epoch_multiplier=1,
-)
-pref_comparisons.train(total_timesteps=5_000, total_comparisons=200)
-
-reward, _ = evaluate_policy(agent.policy, venv, 10)
-print("Reward:", reward)
+print(f"Reward after training: {reward}")
