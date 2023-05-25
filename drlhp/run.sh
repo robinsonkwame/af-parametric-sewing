@@ -1,10 +1,18 @@
 #!/bin/bash
-SB3="stable-baselines3"
-THE_SCRIPT="preference_comparsion_script.py"
-cp "${THE_SCRIPT}" "./${SB3}"
-cd "${SB3}"
+IMAGE=imitation
 
-./scripts/run_docker_gpu.sh python "${THE_SCRIPT}"
+cmd_line="$@"
 
-rm "${THE_SCRIPT}"
-cd ..
+echo "Executing imitation container w command! (gpu image):"
+echo $cmd_line
+
+if [ -x "$(which nvidia-docker)" ]; then
+  # old-style nvidia-docker2
+  NVIDIA_ARG="--runtime=nvidia"
+else
+  NVIDIA_ARG="--gpus all"
+fi
+
+docker run -it ${NVIDIA_ARG} --rm --network host --ipc=host \
+  --mount src=$(pwd),target=/tmp,type=bind ${IMAGE} \
+  $cmd_line
