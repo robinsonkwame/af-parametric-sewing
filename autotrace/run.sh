@@ -1,0 +1,1 @@
+docker build -t autotrace . && docker run --name autotrace --rm -p 8111:8111 autotrace

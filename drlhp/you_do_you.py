@@ -1,3 +1,3 @@
 from app.environment import return_default_endpoint_args
 
-return_default_endpoint_args()
+#return_default_endpoint_args()
