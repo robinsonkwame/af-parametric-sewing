@@ -1,5 +1,8 @@
 import gym
-from gym.spaces import Box, Discrete
+from gym.spaces import Box, Discrete, Tuple, Dict
+from gym.wrappers import FlattenObservation
+from collections import OrderedDict
+
 
 LOWER_MAGNITUDE = 0.001
 UPPER_MAGNITUDE = 100
@@ -83,3 +86,43 @@ parameter_to_space = {
     # "corner-threshold": rule_for_unsigned,
     # "error-threshold": rule_for_real_type,
 }
+
+# https://gist.github.com/colllin/1172e042edf267d5ec667fa9802673cf
+class FlattenAction(gym.ActionWrapper):
+    """Action wrapper that flattens the action."""
+    def __init__(self, env):
+        super(FlattenAction, self).__init__(env)
+        self.action_space = gym.spaces.utils.flatten_space(self.env.action_space)
+        
+    def action(self, action):
+        return gym.spaces.utils.unflatten(self.env.action_space, action)
+
+    def reverse_action(self, action):
+        return gym.spaces.utils.flatten(self.env.action_space, action)
+
+
+class ArgsToSpaceMapper:
+    def __init__(self, gym.Env, parameter_to_space=parameter_to_space):
+        super(ArgsToSpaceMapper, self).__init__()
+
+        self.args_to_space = Dict()
+        for the_index, an_argument, a_space in enumerate(parameter_to_space.items()):
+            self.args_to_space[an_argument] = {
+                'a_space': a_space(),
+                'the_index': the_index
+            }
+        self.space_to_args = list(self.args_to_space.keys())
+
+        self.observation_space = FlattenObservation(self.args_to_space)
+        self.action_space = FlattenAction(self.space_to_args) #????
+
+    def args_to_spaces(self):
+        lookup_from = self.args_to_space
+        return [
+            lookup_from[arg].sample() for arg in lookup_from
+        ]
+
+    def spaces_to_args(self):
+        return self.space_to_args
+    
+
