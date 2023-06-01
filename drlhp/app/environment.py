@@ -1,109 +1,63 @@
-# snippet implementation fundamental pattern conversion environment
-import requests
-from autotrace import rule_for_boolean
+from gym import Env
+from gym.spaces import Dict
+from gym.spaces.utils import flatten_space, unflatten
+from action import PARAMETERS_TO_SPACES
+from observation import PERCEPTUAL_P_AB_SCORE, stub_perceptual_score
+import numpy as np
 
-AUTOTRACE_PORT = 8111
-THE_ENDPOINT_WE_WANT = {
-    "the_endpoint":"autotrace",
-    "port": AUTOTRACE_PORT,
-    "base_url": f"http://localhost:{AUTOTRACE_PORT}",
-    "openapi": "openapi.json"
-}
+class AutoTrace(Env):
+    def __init__(self):
+        super(AutoTrace, self).__init__()
 
-USE_THIS_FILE = "square.png"
-PATTERN_FILE= f"{USE_THIS_FILE}"
-IMAGE_CACHE = {}
+        # see https://github.com/openai/gym/blob/master/gym/spaces/utils.py#L330-L342
+        self.action_space = flatten_space(
+            Dict(PARAMETERS_TO_SPACES)
+        )
+        # check/ensure that order matches ordering of parameters!!!
+        self.observation_space = PERCEPTUAL_P_AB_SCORE
 
-def return_default_endpoint_args_ordering(endpoint=THE_ENDPOINT_WE_WANT):
-    def access_the_properties(the_json):
-        return the_json['components']['schemas']['Body_autotrace_autotrace__post']['properties']
-    the_json = requests.get(
-        endpoint['base_url']+'/'+endpoint['openapi']
-    ).json()
+        self.number_of_episodes_ran = 0
 
-    return [
-        key for key in access_the_properties(the_json).keys() if '-' in key
-    ]
+        self.the_current_action = None
 
-# we fix the autotrace signature order on the openapi endpoint
-ARGUMENT_SIGNATURE = return_default_endpoint_args_ordering()
+    def reset(self):
+        # Reset the environment and return the initial observation/state
+        initial_observation = self._get_observation()
+        return initial_observation
 
-def from_spaces(a_sampled_space, signature):
-    return {
-        signature[sample_index]: sample_value            
-            for sample_index, sample_value in enumerate(a_sampled_space)
-    }
+    def step(self, the_action):
+        self.number_of_episodes_ran += 1
 
-def call_autotrace(use_this_image, use_these_spaces, endpoint=THE_ENDPOINT_WE_WANT, signature=ARGUMENT_SIGNATURE):
-    use_these_arguments = from_spaces(use_these_spaces, ARGUMENT_SIGNATURE)
+        self._register(the_action)
 
-    print(use_these_arguments)
+        the_next_observation = self._get_observation()
 
-    response = requests.post(
-        endpoint['base_url']+'/'+endpoint['the_endpoint'],
-        files={
-            'a_file': (
-                use_this_image, 
-                open(use_this_image, 'rb'),
-                'image/png'
-            )
-        },
-        params=use_these_arguments
-    )
-    if response.ok:
-        pass
-        # return .svg so it can be turned into an observation
+        reward = self._get_reward()
+        done = self._stub_done()
+        info = {"episode": self.number_of_episodes_ran}
 
-print(
-    call_autotrace('/tmp/square.png', use_these_spaces=[1 for _ in ARGUMENT_SIGNATURE])
-)
+        return the_next_observation, reward, done, info
 
+    def _register(self, the_action):
+        self.the_current_action = the_action
 
-# TODO:
-#
-# 1) finish autotrace, provides spaces for each parameter
-# 2) using that, construct the actions for a customenv
-# 3) build a custom observation space, somethign super simple, like a scalar 0-1 for overlap
-# 4) implement a function that uses the autotrace endpint to derive an observation; call w/in the step function
+    def _get_observation(self):
+        # get self.the_current_action, pass to autotrace, return perceptual distortation score
+        # or set the perceptual distoration score for _get_reward to fetch?
 
-# import gym
-# from gym import spaces
-# from subprocess import Popen, PIPE
+        # unflatten(
+        #             Dict(PARAMETERS_TO_SPACES),
+        #             the_action
+        #         )
 
-# class CustomEnv(gym.Env):
-#     def __init__(self):
-#         super(CustomEnv, self).__init__()
-
-#         # Define the observation space
-#         self.observation_space = spaces.Box(low=0, high=255, shape=(64, 64, 3), dtype=np.uint8)
-
-#         # Define the action space
-#         self.action_space = spaces.Discrete(2)  # Example: binary action space
-
-#         # Initialize the external process
-#         self.process = Popen(['your_command'], stdout=PIPE, stderr=PIPE)
-
-#     def step(self, action):
-#         # Send the action to the external process and get the next observation, reward, and done flag
-#         # Example: communicate with the process and parse the output
-#         stdout, stderr = self.process.communicate(input=str(action).encode())
-#         observation = parse_observation(stdout)
-#         reward = parse_reward(stdout)
-#         done = parse_done(stdout)
-
-#         return observation, reward, done, {}
-
-#     def reset(self):
-#         # Reset the environment and get the initial observation
-#         # Example: send a reset command to the process and parse the output
-#         self.process.stdin.write(b'reset\n')
-#         self.process.stdin.flush()
-#         stdout, stderr = self.process.communicate()
-#         observation = parse_observation(stdout)
-
-#         return observation
-
-#     def close(self):
-#         # Terminate the external process
-#         self.process.terminate()
-#         self.process.wait()
+        return self._get_reward() # yeah
+    
+    def _get_reward(self):
+        # stub
+        return stub_perceptual_score(self.the_current_action) # always doing better  
+    
+    def _stub_done(self):
+        done = False
+        if self.number_of_episodes_ran > 100:
+            done = True
+        return done
