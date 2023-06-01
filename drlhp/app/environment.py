@@ -30,8 +30,8 @@ class AutoTrace(Env):
 
         self._register(the_action)
 
-        the_next_observation = self._get_observation()
-
+        reward = self._get_reward()
+        the_next_observation = reward #self._get_observation()
         reward = self._get_reward()
         done = self._stub_done()
         info = {"episode": self.number_of_episodes_ran}
@@ -42,18 +42,13 @@ class AutoTrace(Env):
         self.the_current_action = the_action
 
     def _get_observation(self):
-        # get self.the_current_action, pass to autotrace, return perceptual distortation score
-        # or set the perceptual distoration score for _get_reward to fetch?
-
-        # unflatten(
-        #             Dict(PARAMETERS_TO_SPACES),
-        #             the_action
-        #         )
-
         return self._get_reward() # yeah
     
     def _get_reward(self):
         # stub
+        if self.the_current_action is None:
+            return self.observation_space.max()
+
         return stub_perceptual_score(self.the_current_action) # always doing better  
     
     def _stub_done(self):
