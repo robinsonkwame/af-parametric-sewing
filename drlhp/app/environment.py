@@ -1,6 +1,6 @@
 # snippet implementation fundamental pattern conversion environment
 import requests
-from app.autotrace import rule_for_boolean
+from autotrace import rule_for_boolean
 
 AUTOTRACE_PORT = 8111
 THE_ENDPOINT_WE_WANT = {
@@ -12,13 +12,52 @@ THE_ENDPOINT_WE_WANT = {
 
 USE_THIS_FILE = "square.png"
 PATTERN_FILE= f"{USE_THIS_FILE}"
+IMAGE_CACHE = {}
 
-def return_default_endpoint_args(endpoint=THE_ENDPOINT_WE_WANT):
+def return_default_endpoint_args_ordering(endpoint=THE_ENDPOINT_WE_WANT):
+    def access_the_properties(the_json):
+        return the_json['components']['schemas']['Body_autotrace_autotrace__post']['properties']
     the_json = requests.get(
         endpoint['base_url']+'/'+endpoint['openapi']
     ).json()
 
-    print(the_json)
+    return [
+        key for key in access_the_properties(the_json).keys() if '-' in key
+    ]
+
+# we fix the autotrace signature order on the openapi endpoint
+ARGUMENT_SIGNATURE = return_default_endpoint_args_ordering()
+
+def from_spaces(a_sampled_space, signature):
+    return {
+        signature[sample_index]: sample_value            
+            for sample_index, sample_value in enumerate(a_sampled_space)
+    }
+
+def call_autotrace(use_this_image, use_these_spaces, endpoint=THE_ENDPOINT_WE_WANT, signature=ARGUMENT_SIGNATURE):
+    use_these_arguments = from_spaces(use_these_spaces, ARGUMENT_SIGNATURE)
+
+    print(use_these_arguments)
+
+    response = requests.post(
+        endpoint['base_url']+'/'+endpoint['the_endpoint'],
+        files={
+            'a_file': (
+                use_this_image, 
+                open(use_this_image, 'rb'),
+                'image/png'
+            )
+        },
+        params=use_these_arguments
+    )
+    if response.ok:
+        pass
+        # return .svg so it can be turned into an observation
+
+print(
+    call_autotrace('/tmp/square.png', use_these_spaces=[1 for _ in ARGUMENT_SIGNATURE])
+)
+
 
 # TODO:
 #
