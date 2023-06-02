@@ -1,5 +1,5 @@
-import gym
-from gym.spaces import Box, Discrete, Tuple, Dict
+import numpy as np
+from gym.spaces import Box, Discrete, Dict, MultiDiscrete
 from collections import OrderedDict
 from utils import ARGUMENT_PROPERTIES
 
@@ -8,6 +8,48 @@ UPPER_MAGNITUDE = 100
 
 LOWER_MAGNITUDE_INTEGER = 0
 UPPER_MAGNITUDE_INTEGER = 100
+
+# get these two workign tmmrw
+def discretize_dict_space(dict_space, bins):
+    low = []
+    high = []
+    nvec = []
+    spaces = []
+
+    for key, space in dict_space.items():
+        if isinstance(space, Box):
+            low.extend(space.low.tolist())
+            high.extend(space.high.tolist())
+            n = bins[key]
+            nvec.append(n)
+            spaces.append(Discrete(n))
+        elif isinstance(space, Discrete):
+            low.append(space.n)
+            high.append(space.n)
+            nvec.append(1)
+            spaces.append(space)
+        else:
+            raise ValueError(f"Unsupported space type: {type(space)}")
+
+    multi_discrete_space = MultiDiscrete(nvec)
+    multi_discrete_space.low = np.array(low)
+    multi_discrete_space.high = np.array(high)
+
+    return multi_discrete_space, spaces
+
+def convert_sample_to_a_dict_sample(sample, dict_space):
+    dict_sample = {}
+
+    for (key, space), value in zip(dict_space.items(), sample):
+        if isinstance(space, Box):
+            dict_sample[key] = np.interp(value, [0, space.n - 1], [space.low, space.high])
+        elif isinstance(space, Discrete):
+            dict_sample[key] = value
+        else:
+            raise ValueError(f"Unsupported space type: {type(space)}")
+
+    return dict_sample
+
 
 def return_box(func):
     def wrapper(*args, **kwargs):
@@ -20,7 +62,6 @@ def return_discrete(func):
         the_values = func(*args, **kwargs)
         return Discrete(len(the_values))
     return wrapper
-
 
 @return_box
 def rule_for_real_type(the_doc_key):
@@ -58,9 +99,7 @@ def rule_for_color_count():
 
 @return_discrete
 def rule_for_boolean():
-    return (
-        True, False
-    )
+    return [0,1]
 
 @return_discrete
 def rule_for_unsigned(the_doc_key):
@@ -73,40 +112,21 @@ def rule_for_unsigned(the_doc_key):
         list(range(lower, upper))
     )
 
-PARAMETERS_TO_SPACES = {
-    "centerline":  rule_for_boolean(),
-    "filter-iterations": rule_for_unsigned(ARGUMENT_PROPERTIES['filter-iterations']),
-    "line-reversion-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-reversion-threshold']),
-    # "corner-always-threshold": rule_for_unsigned,
-    # "background-color": rule_for_background_color,
-    # "color-count": rule_for_color_count,
-    # "corner-surround": rule_for_unsigned,
-    # "corner-threshold": rule_for_unsigned,
-    # "error-threshold": rule_for_real_type,
-}
-
-# class ArgsToSpaceMapper:
-#     def __init__(self, gym.Env, parameter_to_space=parameter_to_space):
-#         super(ArgsToSpaceMapper, self).__init__()
-
-#         self.args_to_space = Dict()
-#         for the_index, an_argument, a_space in enumerate(parameter_to_space.items()):
-#             self.args_to_space[an_argument] = {
-#                 'a_space': a_space(),
-#                 'the_index': the_index
-#             }
-#         self.space_to_args = list(self.args_to_space.keys())
-
-#         self.observation_space = FlattenObservation(self.args_to_space)
-#         self.action_space = FlattenAction(self.space_to_args) #????
-
-#     def args_to_spaces(self):
-#         lookup_from = self.args_to_space
-#         return [
-#             lookup_from[arg].sample() for arg in lookup_from
-#         ]
-
-#     def spaces_to_args(self):
-#         return self.space_to_args
+PARAMETERS_TO_SPACES = Dict({
+    "test_param": MultiDiscrete(4),
+    "test_param2": MultiDiscrete(9)
+})
     
 
+
+# PARAMETERS_TO_SPACES = {
+#     #"centerline":  rule_for_boolean(),
+#     #"filter-iterations": rule_for_unsigned(ARGUMENT_PROPERTIES['filter-iterations']),
+#     "line-reversion-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-reversion-threshold']),
+#     # "corner-always-threshold": rule_for_unsigned,
+#     # "background-color": rule_for_background_color,
+#     # "color-count": rule_for_color_count,
+#     # "corner-surround": rule_for_unsigned,
+#     # "corner-threshold": rule_for_unsigned,
+#     # "error-threshold": rule_for_real_type,
+# }

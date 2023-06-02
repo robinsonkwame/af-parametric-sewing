@@ -10,7 +10,7 @@ import random
 #
 # note: they fram in terms of (R)eference image, (A) the left image, (B) the right image
 # and estimate P AB( perceptual error S_A, S_B)
-PERCEPTUAL_P_AB_SCORE = Box(low=0, high=1, shape=(2,))
+PERCEPTUAL_P_AB_SCORE = Box(low=0, high=1, shape=(1,))
 
 # For testing, helping with integration testing/coding
 random.seed(42)
