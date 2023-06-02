@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Union
 from gym.spaces import Box, Discrete, Dict, MultiDiscrete
 from collections import OrderedDict
 from utils import ARGUMENT_PROPERTIES
@@ -11,40 +12,39 @@ UPPER_MAGNITUDE_INTEGER = 100
 
 # get these two workign tmmrw
 def discretize_dict_space(dict_space, bins):
-    low = []
-    high = []
     nvec = []
-    spaces = []
 
-    for key, space in dict_space.items():
+    for key, item in dict_space.items():
+        space = item['space']
         if isinstance(space, Box):
-            low.extend(space.low.tolist())
-            high.extend(space.high.tolist())
             n = bins[key]
             nvec.append(n)
-            spaces.append(Discrete(n))
         elif isinstance(space, Discrete):
-            low.append(space.n)
-            high.append(space.n)
-            nvec.append(1)
-            spaces.append(space)
+            nvec.append(space.n)
         else:
             raise ValueError(f"Unsupported space type: {type(space)}")
 
     multi_discrete_space = MultiDiscrete(nvec)
-    multi_discrete_space.low = np.array(low)
-    multi_discrete_space.high = np.array(high)
 
-    return multi_discrete_space, spaces
+    return {
+        "MultiDiscretizedDictSpace": multi_discrete_space
+    }
 
-def convert_sample_to_a_dict_sample(sample, dict_space):
+def convert_sample_to_a_dict_sample(sample, dict_space, bins):
     dict_sample = {}
 
-    for (key, space), value in zip(dict_space.items(), sample):
+    for (key, item), value in zip(dict_space.items(), sample):
+        space = item['space']
         if isinstance(space, Box):
-            dict_sample[key] = np.interp(value, [0, space.n - 1], [space.low, space.high])
+            dict_sample[key] = np.interp(
+                value, 
+                [0, bins[key]], 
+                [space.low[0], space.high[0]]
+            )
         elif isinstance(space, Discrete):
-            dict_sample[key] = value
+            dict_sample[key] = value + item['start']
+        elif isinstance(space, MultiDiscrete):
+            dict_sample[key] = value # really
         else:
             raise ValueError(f"Unsupported space type: {type(space)}")
 
@@ -59,7 +59,7 @@ def return_box(func):
 
 def return_discrete(func):
     def wrapper(*args, **kwargs):
-        the_values = func(*args, **kwargs)
+        the_values, start_from = func(*args, **kwargs)
         return Discrete(len(the_values))
     return wrapper
 
@@ -99,7 +99,7 @@ def rule_for_color_count():
 
 @return_discrete
 def rule_for_boolean():
-    return [0,1]
+    return [0,1], 0
 
 @return_discrete
 def rule_for_unsigned(the_doc_key):
@@ -109,15 +109,14 @@ def rule_for_unsigned(the_doc_key):
     upper *= the_doc_key.get('default', 1)
 
     return (
-        list(range(lower, upper))
+        list(range(lower, upper)), lower
     )
 
-PARAMETERS_TO_SPACES = Dict({
-    "test_param": MultiDiscrete(4),
-    "test_param2": MultiDiscrete(9)
-})
-    
-
+# my version of gym doesn't support Discrete start !?
+PARAMETERS_TO_SPACES = {
+    "test_discrete": {'space': Discrete(4), 'start' : -1},
+    "test_box": {'space': Box(low=0, high=1, shape=(1,))}
+}
 
 # PARAMETERS_TO_SPACES = {
 #     #"centerline":  rule_for_boolean(),
@@ -130,3 +129,28 @@ PARAMETERS_TO_SPACES = Dict({
 #     # "corner-threshold": rule_for_unsigned,
 #     # "error-threshold": rule_for_real_type,
 # }
+
+
+# test dict to multidiscrete
+bins={
+    "test_box": 50
+}
+new_action_space = discretize_dict_space(PARAMETERS_TO_SPACES, bins=bins)
+
+print(
+    f"Our discretized action space is: {new_action_space}"
+)
+
+a_sample = new_action_space['MultiDiscretizedDictSpace'].sample()
+
+print(
+    f"And our sample from it is {a_sample}"
+)
+
+a_dict_sample = convert_sample_to_a_dict_sample(a_sample, PARAMETERS_TO_SPACES, bins)
+
+print(
+    "back converted to...",
+    a_sample,
+    a_dict_sample
+)
