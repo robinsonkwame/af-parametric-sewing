@@ -1,14 +1,12 @@
 import numpy as np
-from typing import Union
-from gym.spaces import Box, Discrete, Dict, MultiDiscrete
-from collections import OrderedDict
+from gym.spaces import Box, Discrete, MultiDiscrete
 from utils import ARGUMENT_PROPERTIES
 
 LOWER_MAGNITUDE = 0.001
 UPPER_MAGNITUDE = 100
 
 LOWER_MAGNITUDE_INTEGER = 0
-UPPER_MAGNITUDE_INTEGER = 100
+UPPER_MAGNITUDE_INTEGER = 50
 
 def discretize_dict_space(dict_space, bins):
     nvec = []
@@ -16,7 +14,9 @@ def discretize_dict_space(dict_space, bins):
     for key, item in dict_space.items():
         space = item['space']
         if isinstance(space, Box):
-            n = bins[key]
+            n = bins['default']
+            if key in bins:
+                n = bins[key]
             nvec.append(n)
         elif isinstance(space, Discrete):
             nvec.append(space.n)
@@ -35,13 +35,19 @@ def convert_sample_to_a_dict_sample(sample, dict_space, bins):
     for (key, item), value in zip(dict_space.items(), sample):
         space = item['space']
         if isinstance(space, Box):
+            xp_high = bins['default']
+            if key in bins:
+                xp_high = bins[key]
             dict_sample[key] = np.interp(
                 value, 
-                [0, bins[key]], 
+                [0, xp_high], 
                 [space.low[0], space.high[0]]
             )
         elif isinstance(space, Discrete):
-            dict_sample[key] = value + item['start']
+            if space.n > 2:
+                dict_sample[key] = value + item.get('start', 0)
+            else:
+                dict_sample[key] = value == 1 # boolean
         else:
             raise ValueError(f"Unsupported space type: {type(space)}")
 
@@ -50,13 +56,20 @@ def convert_sample_to_a_dict_sample(sample, dict_space, bins):
 def return_box(func):
     def wrapper(*args, **kwargs):
         lower, upper = func(*args, **kwargs)
-        return Box(low=lower, high=upper, shape=(1,))
+        return {
+            'space': Box(low=lower, high=upper, shape=(1,))
+        }
     return wrapper
 
+# Gym 0.21 doesn't support Discrete(start=...) so we wrap things
 def return_discrete(func):
     def wrapper(*args, **kwargs):
-        the_values, start_from = func(*args, **kwargs)
-        return Discrete(len(the_values))
+        low, high = func(*args, **kwargs)
+
+        return {
+            'space': Discrete(high-low+1),
+            'start': low
+        }
     return wrapper
 
 @return_box
@@ -95,7 +108,7 @@ def rule_for_color_count():
 
 @return_discrete
 def rule_for_boolean():
-    return [0,1], 0
+    return 0, 1
 
 @return_discrete
 def rule_for_unsigned(the_doc_key):
@@ -104,15 +117,18 @@ def rule_for_unsigned(the_doc_key):
 
     upper *= the_doc_key.get('default', 1)
 
-    return (
-        list(range(lower, upper))
-    )
+    return lower, upper
 
-# Gym 0.21 doesn't support Discrete(start=...) so we wrap things
-PARAMETERS_TO_SPACES = {
-    "test_discrete": {'space': Discrete(4), 'start' : -1},
-    "test_box": {'space': Box(low=0, high=1, shape=(1,))}
-}
 NUMBER_OF_BINS_FOR = {
-    "test_box": 50
+    "test_box": 50,
+    "default": 50
+}
+
+PARAMETERS_TO_SPACES = {
+    "centerline":  rule_for_boolean(),
+    "filter-iterations": rule_for_unsigned(ARGUMENT_PROPERTIES['filter-iterations']),
+    "line-reversion-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-reversion-threshold']),
+    "corner-always-threshold": rule_for_unsigned(ARGUMENT_PROPERTIES['corner-always-threshold']),
+    "corner-surround": rule_for_unsigned(ARGUMENT_PROPERTIES['corner-surround']),
+    "error-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['error-threshold'])
 }

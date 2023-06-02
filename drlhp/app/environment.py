@@ -46,7 +46,8 @@ class AutoTrace(Env):
         # decision-making.
         the_next_observation = reward
         done = self._stub_done()
-        info = {"episode": self.number_of_episodes_ran}
+        # bug: https://github.com/hill-a/stable-baselines/issues/977
+        info = {"episode_number": self.number_of_episodes_ran}
 
         return the_next_observation, reward, done, info
 
@@ -75,4 +76,4 @@ class AutoTrace(Env):
         if self.number_of_episodes_ran > 50:
             done = True
 
-        return done
+        return 
