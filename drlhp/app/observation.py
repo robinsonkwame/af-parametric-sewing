@@ -20,7 +20,7 @@ def stub_perceptual_score(the_action, n_samples=100):
     global STUB_PREVIOUS_RESULT
     STUB_PREVIOUS_RESULT = random.random() + STUB_PREVIOUS_RESULT + 0.25 # always increasing
 
-    return STUB_PREVIOUS_RESULT
+    return np.array([STUB_PREVIOUS_RESULT])
 
 
 def from_spaces(a_sampled_space, signature):

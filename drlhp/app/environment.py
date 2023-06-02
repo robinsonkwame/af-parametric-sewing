@@ -1,3 +1,5 @@
+import io
+from PIL import Image
 from gym import Env
 from action import (
     PARAMETERS_TO_SPACES, NUMBER_OF_BINS_FOR, 
@@ -6,7 +8,10 @@ from action import (
 from observation import PERCEPTUAL_P_AB_SCORE, stub_perceptual_score
 
 class AutoTrace(Env):
+    metadata = {"render_modes": ["rgb_array_list"]}
+    
     def __init__(self):
+
         super(AutoTrace, self).__init__()
 
         self.action_space = discretize_dict_space(
@@ -14,7 +19,7 @@ class AutoTrace(Env):
             NUMBER_OF_BINS_FOR
         )['MultiDiscretizedDictSpace']
         
-        self.observation_space = PERCEPTUAL_P_AB_SCORE
+        self.observation_space = PERCEPTUAL_P_AB_SCORE # MultiInputPolicy might expect an array or somethign?
         self.number_of_episodes_ran = 0
         self.the_current_action = None
 
@@ -46,6 +51,7 @@ class AutoTrace(Env):
         # decision-making.
         the_next_observation = reward
         done = self._stub_done()
+
         # bug: https://github.com/hill-a/stable-baselines/issues/977
         info = {"episode_number": self.number_of_episodes_ran}
 
@@ -76,4 +82,23 @@ class AutoTrace(Env):
         if self.number_of_episodes_ran > 50:
             done = True
 
-        return 
+        return
+    
+    def render(self):
+        # Open the image using Pillow
+        my_square = Image.open('./square.png')
+
+        # Rotate the image by 3 degrees
+        rotated_image = my_square.rotate( 3 * self.number_of_episodes_ran % 360)
+
+        # Create an in-memory buffer to store the rotated image
+        buffer = io.BytesIO()
+
+        # Save the rotated image to the buffer in PNG format
+        rotated_image.save(buffer, format='PNG')
+
+        # Seek to the beginning of the buffer
+        buffer.seek(0)
+
+        # Return the buffer
+        return buffer
