@@ -1,22 +1,18 @@
 from gym import Env
-from gym.spaces import Tuple, MultiDiscrete
-from gym.spaces.utils import flatten_space, unflatten, flatten
-from action import PARAMETERS_TO_SPACES
+from action import (
+    PARAMETERS_TO_SPACES, NUMBER_OF_BINS_FOR, 
+    discretize_dict_space, convert_sample_to_a_dict_sample
+)
 from observation import PERCEPTUAL_P_AB_SCORE, stub_perceptual_score
 
 class AutoTrace(Env):
     def __init__(self):
         super(AutoTrace, self).__init__()
 
-        self.action_space = flatten_space(
-            PARAMETERS_TO_SPACES
-        )
-        self.action_space = MultiDiscrete([4, 9])
-        
-        print(
-            "setting the action space with",
-            self.action_space
-        )
+        self.action_space = discretize_dict_space(
+            PARAMETERS_TO_SPACES,
+            NUMBER_OF_BINS_FOR
+        )['MultiDiscretizedDictSpace']
         
         self.observation_space = PERCEPTUAL_P_AB_SCORE
         self.number_of_episodes_ran = 0
@@ -43,28 +39,30 @@ class AutoTrace(Env):
         # that lead to higher observed values because those actions are considered more 
         # desirable or beneficial.
 
-        # However, it's important to note that in most realistic reinforcement 
-        # learning scenarios, the reward and observation are distinct and serve 
-        # different purposes. The reward provides a more explicit feedback signal that 
-        # guides the agent's learning process, while the observation provides 
-        # information about the environment's state or features necessary for 
+        # In most realistic reinforcement learning scenarios, the reward and observation 
+        # are distinct and serve different purposes. The reward provides a more explicit
+        # feedback signal that guides the agent's learning process, while the observation 
+        # provides information about the environment's state or features necessary for 
         # decision-making.
         the_next_observation = reward
-        done = True #self._stub_done()
+        done = self._stub_done()
         info = {"episode": self.number_of_episodes_ran}
 
         return the_next_observation, reward, done, info
 
-    def _register(self, the_action):
-        # debug to deconstruct the action so I can pass it to autotrace
-        
-        self.the_current_action = the_action
+    def _register(self, the_action):        
+        self.the_current_action = convert_sample_to_a_dict_sample(
+            the_action,
+            PARAMETERS_TO_SPACES,
+            NUMBER_OF_BINS_FOR
+        )
+
         print(
-            the_action
+            self.the_current_action
         )
 
     def _get_observation(self):
-        return self._get_reward() # yeah
+        return self._get_reward()
     
     def _get_reward(self):
         if self.the_current_action is None:

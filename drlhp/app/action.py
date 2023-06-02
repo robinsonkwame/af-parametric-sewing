@@ -10,7 +10,6 @@ UPPER_MAGNITUDE = 100
 LOWER_MAGNITUDE_INTEGER = 0
 UPPER_MAGNITUDE_INTEGER = 100
 
-# get these two workign tmmrw
 def discretize_dict_space(dict_space, bins):
     nvec = []
 
@@ -43,13 +42,10 @@ def convert_sample_to_a_dict_sample(sample, dict_space, bins):
             )
         elif isinstance(space, Discrete):
             dict_sample[key] = value + item['start']
-        elif isinstance(space, MultiDiscrete):
-            dict_sample[key] = value # really
         else:
             raise ValueError(f"Unsupported space type: {type(space)}")
 
     return dict_sample
-
 
 def return_box(func):
     def wrapper(*args, **kwargs):
@@ -109,48 +105,14 @@ def rule_for_unsigned(the_doc_key):
     upper *= the_doc_key.get('default', 1)
 
     return (
-        list(range(lower, upper)), lower
+        list(range(lower, upper))
     )
 
-# my version of gym doesn't support Discrete start !?
+# Gym 0.21 doesn't support Discrete(start=...) so we wrap things
 PARAMETERS_TO_SPACES = {
     "test_discrete": {'space': Discrete(4), 'start' : -1},
     "test_box": {'space': Box(low=0, high=1, shape=(1,))}
 }
-
-# PARAMETERS_TO_SPACES = {
-#     #"centerline":  rule_for_boolean(),
-#     #"filter-iterations": rule_for_unsigned(ARGUMENT_PROPERTIES['filter-iterations']),
-#     "line-reversion-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-reversion-threshold']),
-#     # "corner-always-threshold": rule_for_unsigned,
-#     # "background-color": rule_for_background_color,
-#     # "color-count": rule_for_color_count,
-#     # "corner-surround": rule_for_unsigned,
-#     # "corner-threshold": rule_for_unsigned,
-#     # "error-threshold": rule_for_real_type,
-# }
-
-
-# test dict to multidiscrete
-bins={
+NUMBER_OF_BINS_FOR = {
     "test_box": 50
 }
-new_action_space = discretize_dict_space(PARAMETERS_TO_SPACES, bins=bins)
-
-print(
-    f"Our discretized action space is: {new_action_space}"
-)
-
-a_sample = new_action_space['MultiDiscretizedDictSpace'].sample()
-
-print(
-    f"And our sample from it is {a_sample}"
-)
-
-a_dict_sample = convert_sample_to_a_dict_sample(a_sample, PARAMETERS_TO_SPACES, bins)
-
-print(
-    "back converted to...",
-    a_sample,
-    a_dict_sample
-)
