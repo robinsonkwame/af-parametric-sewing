@@ -1,6 +1,6 @@
 import requests
 from utils import ARGUMENT_SIGNATURE, THE_ENDPOINT_WE_WANT
-from gym.spaces import Box
+from gym.spaces import Box, Dict
 import numpy as np
 import random
 
@@ -10,17 +10,18 @@ import random
 #
 # note: they fram in terms of (R)eference image, (A) the left image, (B) the right image
 # and estimate P AB( perceptual error S_A, S_B)
-PERCEPTUAL_P_AB_SCORE = Box(low=0, high=1, shape=(1,))
-
-# For testing, helping with integration testing/coding
 random.seed(42)
 STUB_PREVIOUS_RESULT = 0
+
+PERCEPTUAL_P_AB_SCORE = Box(0, 1, shape=(1,), dtype=np.float32)
+
+# For testing, helping with integration testing/coding
 
 def stub_perceptual_score(the_action, n_samples=100):
     global STUB_PREVIOUS_RESULT
     STUB_PREVIOUS_RESULT = random.random() + STUB_PREVIOUS_RESULT + 0.25 # always increasing
 
-    return np.array([STUB_PREVIOUS_RESULT])
+    return STUB_PREVIOUS_RESULT #np.array([STUB_PREVIOUS_RESULT])
 
 
 def from_spaces(a_sampled_space, signature):

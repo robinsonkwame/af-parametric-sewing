@@ -1,36 +1,14 @@
 from environment import AutoTrace
 from stable_baselines3 import PPO
-from gym.wrappers.monitoring.video_recorder import VideoRecorder
+from stable_baselines3.common.monitor import Monitor
 
-
-print("\t ... starting incremental stub testing with environment")
+POLICY_TYPE = "MlpPolicy" #"MultiInputPolicy" GoalEnv? complains that observation has no space; version of Gym too old?
 
 the_gym_environment = AutoTrace()
 
-video_recorder = VideoRecorder(
-    the_gym_environment, 
-    path='video.mp4'
-)
+monitor_env = Monitor(the_gym_environment, 'logs/')
 
+the_agent = PPO(POLICY_TYPE, monitor_env, verbose=1)
 
-POLICY_TYPE = "MlpPolicy" #"MultiInputPolicy" complains that observation has no space; version of Gym too old?
-
-the_agent = PPO(POLICY_TYPE, the_gym_environment, verbose=1)
-
-# Define your custom training loop
-for i in range(1):
-    observation = the_gym_environment.reset()
-    for _ in range(1):
-        # Perform the action in the environment
-        action, _ = the_agent.predict(observation)
-        observation, reward, done, info = the_gym_environment.step(action)
-
-        # Record the frame using VideoRecorder
-        video_recorder.capture_frame()
-
-        # Update the model
-        the_agent.learn(total_timesteps=1, reset_num_timesteps=False)
-
-video_recorder.close()
-
-print(f"Done! look for video?")
+the_agent.learn(total_timesteps=100, reset_num_timesteps = False, tb_log_name = "PPO")
+the_agent.save('the_agent')

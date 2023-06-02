@@ -1,15 +1,15 @@
 import io
+import numpy as np
 from PIL import Image
 from gym import Env
+from gym.spaces import Box, Dict
 from action import (
     PARAMETERS_TO_SPACES, NUMBER_OF_BINS_FOR, 
     discretize_dict_space, convert_sample_to_a_dict_sample
 )
 from observation import PERCEPTUAL_P_AB_SCORE, stub_perceptual_score
 
-class AutoTrace(Env):
-    metadata = {"render_modes": ["rgb_array_list"]}
-    
+class AutoTrace(Env):    
     def __init__(self):
 
         super(AutoTrace, self).__init__()
@@ -19,13 +19,13 @@ class AutoTrace(Env):
             NUMBER_OF_BINS_FOR
         )['MultiDiscretizedDictSpace']
         
-        self.observation_space = PERCEPTUAL_P_AB_SCORE # MultiInputPolicy might expect an array or somethign?
+        self.observation_space = PERCEPTUAL_P_AB_SCORE
+
         self.number_of_episodes_ran = 0
         self.the_current_action = None
 
     def reset(self):
-        initial_observation = self._get_observation()
-        return initial_observation
+        return self.observation_space.sample()
 
     def step(self, the_action):
         self.number_of_episodes_ran += 1
@@ -53,7 +53,9 @@ class AutoTrace(Env):
         done = self._stub_done()
 
         # bug: https://github.com/hill-a/stable-baselines/issues/977
-        info = {"episode_number": self.number_of_episodes_ran}
+        info = {
+            "action": the_action,
+        }
 
         return the_next_observation, reward, done, info
 
@@ -73,7 +75,7 @@ class AutoTrace(Env):
     
     def _get_reward(self):
         if self.the_current_action is None:
-            return self.observation_space.high
+            return np.array([0])
 
         return stub_perceptual_score(self.the_current_action)
     
@@ -82,9 +84,12 @@ class AutoTrace(Env):
         if self.number_of_episodes_ran > 50:
             done = True
 
-        return
+        # see https://stackoverflow.com/questions/71786530/rollout-summary-statistics-not-being-monitored-for-customenv-using-stable-baseli
+        # if done not set then statistics etc aren't logged?
+        return done
     
     def render(self):
+        print('... was called?')
         # Open the image using Pillow
         my_square = Image.open('./square.png')
 
