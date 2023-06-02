@@ -1,14 +1,12 @@
 from environment import AutoTrace
 from stable_baselines3 import PPO
-from stable_baselines3.common.monitor import Monitor
+from gym.wrappers import Monitor
 
-POLICY_TYPE = "MlpPolicy" #"MultiInputPolicy" GoalEnv? complains that observation has no space; version of Gym too old?
-
-the_gym_environment = AutoTrace()
-
-monitor_env = Monitor(the_gym_environment, 'logs/')
-
-the_agent = PPO(POLICY_TYPE, monitor_env, verbose=1)
-
-the_agent.learn(total_timesteps=100, reset_num_timesteps = False, tb_log_name = "PPO")
-the_agent.save('the_agent')
+# /usr/lib/python3.8/site-packages/gym/wrappers/monitor.py:86: UserWarning: WARN: 
+# Trying to monitor an environment which has no 'spec' set. This usually means you 
+# did not create it via 'gym.make', and is recommended only for advanced users.
+env = AutoTrace()
+env = Monitor(env, "./logs", force=True)
+model = PPO("MlpPolicy", env)
+model.learn(total_timesteps=10, tb_log_name = "PPO")
+model.save('the_agent')

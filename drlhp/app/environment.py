@@ -1,4 +1,7 @@
 import io
+import os
+import glob
+import subprocess
 import numpy as np
 from PIL import Image
 from gym import Env
@@ -8,6 +11,42 @@ from action import (
     discretize_dict_space, convert_sample_to_a_dict_sample
 )
 from observation import PERCEPTUAL_P_AB_SCORE, stub_perceptual_score
+
+class VideoRecorder:
+    def __init__(self, output_file="video.mp4", output_dir="./videos/", fps=20):
+        self.output_file = output_file
+        self.output_dir = output_dir
+        self.fps = fps
+        self.frame_count = 0
+    
+        self.file_path = f"{self.output_dir}{self.output_file}"
+
+    def add_frame(self, frame):
+        frame_file = f"{self.output_dir}frame_{self.frame_count}.png"
+        with open(frame_file, 'wb') as f:
+            f.write(frame.getvalue())
+        self.frame_count += 1
+    
+    def create_video(self):
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            str(self.fps),
+            "-i",
+            f"{self.output_dir}frame_%d.png",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            self.file_path
+        ]
+        subprocess.run(cmd)
+
+        png_files = glob.glob(f"{self.output_dir}/*.png")
+        # Delete each PNG file
+        for file in png_files:
+            os.remove(file)        
 
 class AutoTrace(Env):    
     def __init__(self):
@@ -24,7 +63,12 @@ class AutoTrace(Env):
         self.number_of_episodes_ran = 0
         self.the_current_action = None
 
+        self.video_recorder = VideoRecorder()
+
+
     def reset(self):
+        self.video_recorder = VideoRecorder()
+
         return self.observation_space.sample()
 
     def step(self, the_action):
@@ -57,6 +101,11 @@ class AutoTrace(Env):
             "action": the_action,
         }
 
+        # Add frame to video recorder
+        self.video_recorder.add_frame(
+            self.render(mode="rgb_array")
+        )
+
         return the_next_observation, reward, done, info
 
     def _register(self, the_action):        
@@ -88,8 +137,7 @@ class AutoTrace(Env):
         # if done not set then statistics etc aren't logged?
         return done
     
-    def render(self):
-        print('... was called?')
+    def render(self, mode='rgb_array'):
         # Open the image using Pillow
         my_square = Image.open('./square.png')
 
@@ -107,3 +155,6 @@ class AutoTrace(Env):
 
         # Return the buffer
         return buffer
+
+    def close(self):
+        self.video_recorder.create_video()
