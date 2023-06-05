@@ -64,8 +64,17 @@ def get_quick_image_score(a_svg_response, use_this_image_buffer):
             io.BytesIO(
                 the_png_conversion
             )
-        )
-    ) # as a numpy array
+        )# assumed to always be "L" or grayscale? Should probably check this
+    )
+
+    # flatten if mismatch
+    if the_png_conversion.ndim != use_this_image_buffer.ndim:
+        if use_this_image_buffer.ndim > the_png_conversion.ndim:
+            use_this_image_buffer = use_this_image_buffer.convert("L")
+        else:
+            the_png_conversion = the_png_conversion.convert("")
+
+    # THEN CONVERT TO NUMPY...
 
     # use_this_image_buffer work with this buffer
     print(
