@@ -56,32 +56,58 @@ def call_autotrace(use_this_image, use_these_arguments, endpoint=THE_ENDPOINT_WE
 
     return response
 
-def get_quick_image_score(a_svg_response, use_this_image_buffer):
+def get_quick_image_score(a_svg_response, use_this_image_pil):
     the_svg_data = a_svg_response
     the_png_conversion = cairosvg.svg2png(bytestring=the_svg_data)
-    the_png_conversion = np.array(
-        Image.open(
+    the_png_conversion = Image.open(
             io.BytesIO(
                 the_png_conversion
             )
-        )# assumed to always be "L" or grayscale? Should probably check this
+    )# assumed to always be "L" or grayscale? Should probably check this
+    def frobenius_distance(image1, image2):
+        difference = image1 - image2
+        squared_difference = np.square(difference)
+        sum_of_squared_difference = np.sum(squared_difference)
+        frobenius_norm = np.sqrt(sum_of_squared_difference)
+        return frobenius_norm
+
+    # Scale the Frobenius distance between 0 and 1
+    def scale_frobenius_distance(image1, image2):
+        max_distance = 255 #np.sqrt(np.sum(np.square(image1.max() - image2.min())))
+        frobenius_norm = frobenius_distance(image1, image2)
+        scaled_distance = frobenius_norm / max_distance
+        return scaled_distance
+
+    # ... so there's a lot to conceptually think through but
+    # for now it's simplest to convert both to grayscale and work from there
+    # This does obsfucate the space that the RL algorithm and the score are
+    # working to and from but I think it'll be okay
+    # if use_this_image_pil.mode > the_png_conversion.mode:
+    #         use_this_image_pil = use_this_image_pil.convert("L")
+    # elif the_png_conversion.mode > use_this_image_pil.mode:
+    #         the_png_conversion = the_png_conversion.convert("L")
+
+    use_this_image_pil.save('TEST_source_image.png')
+    the_png_conversion.save("TEST_converted_image.png")
+
+    use_this_image_pil = np.array(
+        use_this_image_pil.convert("L")
     )
-
-    # flatten if mismatch
-    if the_png_conversion.ndim != use_this_image_buffer.ndim:
-        if use_this_image_buffer.ndim > the_png_conversion.ndim:
-            use_this_image_buffer = use_this_image_buffer.convert("L")
-        else:
-            the_png_conversion = the_png_conversion.convert("")
-
-    # THEN CONVERT TO NUMPY...
+    the_png_conversion = np.array(
+        the_png_conversion.convert("L")
+    ) # autotrace guarantees they're the same size
+    
+    frobenius_distance = scale_frobenius_distance(
+        use_this_image_pil,
+        the_png_conversion
+    )
 
     # use_this_image_buffer work with this buffer
     print(
         the_png_conversion.shape,
-        use_this_image_buffer.shape
+        use_this_image_pil.shape,
+        frobenius_distance
     )
-
 
 def handle_mime_svg_xml(response, apply_this_function, **kwargs):
     """
@@ -96,19 +122,17 @@ def handle_mime_svg_xml(response, apply_this_function, **kwargs):
 
     return return_response
 
-def convert_png_to_single_channel(file_path):
+def convert_png_to_image(file_path):
     response = None
-    response = np.array(
-        Image.open(
+    response = Image.open(
             THE_FILE_TO_USE
-        )
-    ) # as a numpy array
+    )
     
     return response
 
 THE_FILE_TO_USE = '/tmp/square.png'
 
-the_png_conversion = convert_png_to_single_channel(THE_FILE_TO_USE)
+the_png_conversion = convert_png_to_image(THE_FILE_TO_USE)
 # so ... this should be memoized, esp at scale
 
 
@@ -116,5 +140,6 @@ response = call_autotrace(THE_FILE_TO_USE, use_these_arguments="")
 handle_mime_svg_xml(
     response, 
     apply_this_function=get_quick_image_score, 
-    use_this_image_buffer=the_png_conversion)
+    use_this_image_pil=the_png_conversion
+)
 
