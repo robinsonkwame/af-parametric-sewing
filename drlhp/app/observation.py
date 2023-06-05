@@ -1,13 +1,17 @@
+import io
 import requests
 from utils import ARGUMENT_SIGNATURE, THE_ENDPOINT_WE_WANT
+import cairosvg
+from PIL import Image
 from gym.spaces import Box, Dict
 import numpy as np
 import random
 
+
 # from Prashnani (2018) PieAPP. CVPR 
 # # from https://prashnani.github.io/index_files/Prashnani_CVPR_2018_PieAPP_paper.pdf
 # ... "In this paper, we use the Bradley-Terry (BT) sigmoid model [9] for h," (pg 3)
-#
+# ^ probability, so [0, 1]
 # note: they fram in terms of (R)eference image, (A) the left image, (B) the right image
 # and estimate P AB( perceptual error S_A, S_B)
 random.seed(42)
@@ -37,9 +41,7 @@ def from_spaces(a_sampled_space, signature):
             for sample_index, sample_value in enumerate(a_sampled_space)
     }
 
-def call_autotrace(use_this_image, use_these_spaces, endpoint=THE_ENDPOINT_WE_WANT, signature=ARGUMENT_SIGNATURE):
-    use_these_arguments = from_spaces(use_these_spaces, ARGUMENT_SIGNATURE)
-
+def call_autotrace(use_this_image, use_these_arguments, endpoint=THE_ENDPOINT_WE_WANT, signature=ARGUMENT_SIGNATURE):
     response = requests.post(
         endpoint['base_url']+'/'+endpoint['the_endpoint'],
         files={
@@ -51,10 +53,28 @@ def call_autotrace(use_this_image, use_these_spaces, endpoint=THE_ENDPOINT_WE_WA
         },
         params=use_these_arguments
     )
-    if response.ok:
-        pass
-        # return .svg so it can be turned into an observation
 
-# print(
-#     call_autotrace('/tmp/square.png', use_these_spaces=[1 for _ in ARGUMENT_SIGNATURE])
-# )
+    return response # this isn't really opaque :/
+
+def handle_mime_svg_xml(response):
+    """
+    Returns numpy array as a rastered .svg
+    """
+    response = None
+    if response.ok:
+        the_svg_data = response.content
+        the_png_conversion = cairosvg.svg2png(bytestring=the_svg_data)
+        response = np.array(
+            Image.open(
+                io.BytesIO(
+                    the_png_conversion
+                )
+            )
+        )
+
+    return response
+
+print(
+    call_autotrace('/tmp/square.png', use_these_arguments="")
+)
+# then store off, pass response to handle...

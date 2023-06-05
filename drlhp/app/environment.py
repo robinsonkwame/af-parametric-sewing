@@ -134,7 +134,7 @@ class AutoTrace(Env):
             done = True
 
         # see https://stackoverflow.com/questions/71786530/rollout-summary-statistics-not-being-monitored-for-customenv-using-stable-baseli
-        # if done not set then statistics etc aren't logged?
+        # If done not set False then statistics etc aren't logged?
         return done
     
     def render(self, mode='rgb_array'):

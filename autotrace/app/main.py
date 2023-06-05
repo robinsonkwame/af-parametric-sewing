@@ -159,9 +159,13 @@ async def autotrace(
     )):
 
     def make_input_file(file_name):
-        return STORAGE_DIR+file_name+'.'+form_data[INPUT_FORMAT_KEY]
+        form_key = INPUT_FORMAT_KEY[1:]
+        default_input_format = input_format
+        return STORAGE_DIR+file_name+'.'+form_data.get(form_key, default_input_format)
     def make_output_file(file_name):
-        return STORAGE_DIR+file_name+'.'+form_data[OUTPUT_FORMAT_KEY]
+        default_output_format = output_format
+        form_key = OUTPUT_FORMAT_KEY[1:]
+        return STORAGE_DIR+file_name+'.'+form_data.get(form_key, default_output_format)
 
     def check_variable_type(annotations, variable_name, the_type):
         """
@@ -226,8 +230,9 @@ async def autotrace(
     output, error = process.communicate()
 
     if 0 == process.returncode:
+        form_key = OUTPUT_FORMAT_KEY[1:]
         the_user_filename= os.path.splitext(a_file.filename)[0]
-        the_extension = form_data[OUTPUT_FORMAT_KEY]
+        the_extension = form_data.get(form_key, output_format)
         if 'svg' in the_extension:
             the_extension += '+xml'
 
