@@ -25,7 +25,7 @@ def stub_perceptual_score(the_action, n_samples=100):
     global STUB_PREVIOUS_RESULT
     STUB_PREVIOUS_RESULT = random.random() + STUB_PREVIOUS_RESULT + 0.25 # always increasing
 
-    return STUB_PREVIOUS_RESULT #np.array([STUB_PREVIOUS_RESULT])
+    return STUB_PREVIOUS_RESULT
 
 
 def from_spaces(a_sampled_space, signature):
@@ -54,27 +54,58 @@ def call_autotrace(use_this_image, use_these_arguments, endpoint=THE_ENDPOINT_WE
         params=use_these_arguments
     )
 
-    return response # this isn't really opaque :/
+    return response
 
-def handle_mime_svg_xml(response):
+def get_quick_image_score(a_svg_response, use_this_image_buffer):
+    the_svg_data = a_svg_response
+    the_png_conversion = cairosvg.svg2png(bytestring=the_svg_data)
+    the_png_conversion = np.array(
+        Image.open(
+            io.BytesIO(
+                the_png_conversion
+            )
+        )
+    ) # as a numpy array
+
+    # use_this_image_buffer work with this buffer
+    print(
+        the_png_conversion.shape,
+        use_this_image_buffer.shape
+    )
+
+
+def handle_mime_svg_xml(response, apply_this_function, **kwargs):
     """
     Returns numpy array as a rastered .svg
     """
-    response = None
+    return_response = None
     if response.ok:
-        the_svg_data = response.content
-        the_png_conversion = cairosvg.svg2png(bytestring=the_svg_data)
-        response = np.array(
-            Image.open(
-                io.BytesIO(
-                    the_png_conversion
-                )
-            )
+        return_response = apply_this_function(
+            response.content,
+            **kwargs
         )
 
+    return return_response
+
+def convert_png_to_single_channel(file_path):
+    response = None
+    response = np.array(
+        Image.open(
+            THE_FILE_TO_USE
+        )
+    ) # as a numpy array
+    
     return response
 
-print(
-    call_autotrace('/tmp/square.png', use_these_arguments="")
-)
-# then store off, pass response to handle...
+THE_FILE_TO_USE = '/tmp/square.png'
+
+the_png_conversion = convert_png_to_single_channel(THE_FILE_TO_USE)
+# so ... this should be memoized, esp at scale
+
+
+response = call_autotrace(THE_FILE_TO_USE, use_these_arguments="")
+handle_mime_svg_xml(
+    response, 
+    apply_this_function=get_quick_image_score, 
+    use_this_image_buffer=the_png_conversion)
+
