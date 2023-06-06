@@ -1,6 +1,6 @@
 import io
 import requests
-from utils import ARGUMENT_SIGNATURE, THE_ENDPOINT_WE_WANT
+from utils import ARGUMENT_SIGNATURE, THE_ENDPOINT_WE_WANT, sample_to_autotrace
 import cairosvg
 from PIL import Image
 from gym.spaces import Box, Dict
@@ -97,6 +97,7 @@ def get_quick_image_score(a_svg_response, use_this_image_pil):
         the_png_conversion.convert("L")
     ) # autotrace guarantees they're the same size
     
+    # 0 is better (less distance)
     frobenius_distance = scale_frobenius_distance(
         use_this_image_pil,
         the_png_conversion
@@ -109,37 +110,49 @@ def get_quick_image_score(a_svg_response, use_this_image_pil):
         frobenius_distance
     )
 
+    return frobenius_distance
+
 def handle_mime_svg_xml(response, apply_this_function, **kwargs):
     """
     Returns numpy array as a rastered .svg
     """
     return_response = None
     if response.ok:
-        return_response = apply_this_function(
+        frobenius_distance = apply_this_function(
             response.content,
             **kwargs
         )
+        return_response = {
+            "status": "success",
+            "response": response.text,
+            "frobenius_distance": frobenius_distance
+        }
+    else: # autotraced errored out, broke program
+        return_response = {
+            "status": "error",
+            "response": response.text,
+            "frobenius_distance": 1.0
+        }
 
     return return_response
 
 def convert_png_to_image(file_path):
-    response = None
-    response = Image.open(
-            THE_FILE_TO_USE
+    return Image.open(
+        file_path
     )
-    
-    return response
 
-THE_FILE_TO_USE = '/tmp/square.png'
-
-the_png_conversion = convert_png_to_image(THE_FILE_TO_USE)
 # so ... this should be memoized, esp at scale
 
-
-response = call_autotrace(THE_FILE_TO_USE, use_these_arguments="")
-handle_mime_svg_xml(
-    response, 
-    apply_this_function=get_quick_image_score, 
-    use_this_image_pil=the_png_conversion
-)
+# Env provides sampled arguments as sample_arguments and the file to use
+#
+# THE_FILE_TO_USE = '/tmp/square.png'
+# the_png_conversion = convert_png_to_image(THE_FILE_TO_USE)
+# use_these_arguments = sample_to_autotrace(sample_arguments)
+# response = call_autotrace(THE_FILE_TO_USE, use_these_arguments="")
+# handle_mime_svg_xml(
+#     response, 
+#     apply_this_function=get_quick_image_score, 
+#     use_this_image_pil=the_png_conversion
+# )
+# ^ pass response back to environment so that the agent/policy can interpret
 
