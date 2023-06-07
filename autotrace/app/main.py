@@ -221,6 +221,8 @@ async def autotrace(
     # postpend with input file
     command.append(make_input_file(INPUT_FILE))
 
+    print(f"\t calling with {command}")
+
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,

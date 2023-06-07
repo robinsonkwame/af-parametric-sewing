@@ -10,7 +10,12 @@ from action import (
     PARAMETERS_TO_SPACES, NUMBER_OF_BINS_FOR, 
     discretize_dict_space, convert_sample_to_a_dict_sample
 )
-from observation import PERCEPTUAL_P_AB_SCORE, stub_perceptual_score
+from observation import (
+    PERCEPTUAL_P_AB_SCORE, stub_perceptual_score,
+    convert_png_to_image, sample_to_autotrace,
+    call_autotrace, handle_mime_svg_xml,
+    get_quick_image_score
+)
 
 class VideoRecorder:
     def __init__(self, output_file="video.mp4", output_dir="./videos/", fps=20):
@@ -28,20 +33,24 @@ class VideoRecorder:
         self.frame_count += 1
     
     def create_video(self):
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-framerate",
-            str(self.fps),
-            "-i",
-            f"{self.output_dir}frame_%d.png",
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            self.file_path
-        ]
-        subprocess.run(cmd)
+
+        # WHY IS THIS GETTING HIT TWICE?
+        print("\n\t SKIPPING VIDEO CREATION")
+
+        # cmd = [
+        #     "ffmpeg",
+        #     "-y",
+        #     "-framerate",
+        #     str(self.fps),
+        #     "-i",
+        #     f"{self.output_dir}frame_%d.png",
+        #     "-c:v",
+        #     "libx264",
+        #     "-pix_fmt",
+        #     "yuv420p",
+        #     self.file_path
+        # ]
+        # subprocess.run(cmd)
 
         png_files = glob.glob(f"{self.output_dir}/*.png")
         # Delete each PNG file
@@ -49,7 +58,7 @@ class VideoRecorder:
             os.remove(file)        
 
 class AutoTrace(Env):    
-    def __init__(self):
+    def __init__(self, source_filepath):
 
         super(AutoTrace, self).__init__()
 
@@ -64,6 +73,9 @@ class AutoTrace(Env):
         self.the_current_action = None
 
         self.video_recorder = VideoRecorder()
+
+        self.source_filepath = source_filepath
+        self.source_png_file = convert_png_to_image(source_filepath)
 
 
     def reset(self):
@@ -99,6 +111,7 @@ class AutoTrace(Env):
         # bug: https://github.com/hill-a/stable-baselines/issues/977
         info = {
             "action": the_action,
+            "autotrace_parameters": self.the_current_action,
         }
 
         # Add frame to video recorder
@@ -109,24 +122,53 @@ class AutoTrace(Env):
         return the_next_observation, reward, done, info
 
     def _register(self, the_action):        
-        self.the_current_action = convert_sample_to_a_dict_sample(
+        the_current_action = convert_sample_to_a_dict_sample(
             the_action,
             PARAMETERS_TO_SPACES,
             NUMBER_OF_BINS_FOR
         )
 
-        print(
-            self.the_current_action
+        self.the_current_action = sample_to_autotrace(
+            the_current_action
         )
 
     def _get_observation(self):
         return self._get_reward()
     
     def _get_reward(self):
-        if self.the_current_action is None:
-            return np.array([0])
+        """
+        Interact with endpoint, handle result to obtain reward score
+        """
+        the_reward = 0
+        STATUS = 'status'
+        SCORE_KEY = 'frobenius_distance'
 
-        return stub_perceptual_score(self.the_current_action)
+        if self.the_current_action is None:
+            the_reward = self.observation_space.sample()
+        else:
+            print(f"\t going with {self.the_current_action} and {self.number_of_episodes_ran}")
+            response = call_autotrace(
+              self.source_filepath,
+              use_these_arguments = self.the_current_action
+            )
+            endpoint_response = handle_mime_svg_xml(
+                response, 
+                apply_this_function=get_quick_image_score, 
+                use_this_image_pil=self.source_png_file,
+                index=self.number_of_episodes_ran
+            )
+            print(
+                endpoint_response[STATUS],
+                endpoint_response[SCORE_KEY],
+                endpoint_response["response"][-100:]
+            )
+            # The endpoint returns normalized 0-1 difference, with 0 being better
+            # so we reverse map (yes I know the operationalization is mucking
+            # severeal concepts)
+            the_reward = 1 - endpoint_response[SCORE_KEY]
+
+        return the_reward
+        #return stub_perceptual_score(self.the_current_action)
     
     def _stub_done(self):
         done = False
@@ -157,4 +199,6 @@ class AutoTrace(Env):
         return buffer
 
     def close(self):
+        # EXCEPTED FIRST CALL; unsure where other one
+        # comes from
         self.video_recorder.create_video()

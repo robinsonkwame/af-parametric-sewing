@@ -42,21 +42,40 @@ def from_spaces(a_sampled_space, signature):
     }
 
 def call_autotrace(use_this_image, use_these_arguments, endpoint=THE_ENDPOINT_WE_WANT, signature=ARGUMENT_SIGNATURE):
-    response = requests.post(
-        endpoint['base_url']+'/'+endpoint['the_endpoint'],
-        files={
+
+    the_file_and_arguments = {
             'a_file': (
                 use_this_image, 
                 open(use_this_image, 'rb'),
                 'image/png'
             )
-        },
-        params=use_these_arguments
+        }
+
+    the_file_and_arguments.update(
+        {
+            key: (None, value) for key, value in use_these_arguments.items()
+        }
+    )
+
+    print(the_file_and_arguments)
+
+    response = requests.post(
+        endpoint['base_url']+'/'+endpoint['the_endpoint'],
+        files= the_file_and_arguments,        
+        # files={
+        #     'a_file': (
+        #         use_this_image, 
+        #         open(use_this_image, 'rb'),
+        #         'image/png'
+        #     )
+        # },
+        #params=use_these_arguments
+        #data=use_these_arguments
     )
 
     return response
 
-def get_quick_image_score(a_svg_response, use_this_image_pil):
+def get_quick_image_score(a_svg_response, use_this_image_pil, index):
     the_svg_data = a_svg_response
     the_png_conversion = cairosvg.svg2png(bytestring=the_svg_data)
     the_png_conversion = Image.open(
@@ -87,8 +106,8 @@ def get_quick_image_score(a_svg_response, use_this_image_pil):
     # elif the_png_conversion.mode > use_this_image_pil.mode:
     #         the_png_conversion = the_png_conversion.convert("L")
 
-    use_this_image_pil.save('TEST_source_image.png')
-    the_png_conversion.save("TEST_converted_image.png")
+    the_png_conversion.save(f"TEST_converted_image-{index}.png")
+    use_this_image_pil.save(f"TEST_source_image-{index}.png")
 
     use_this_image_pil = np.array(
         use_this_image_pil.convert("L")
@@ -96,6 +115,7 @@ def get_quick_image_score(a_svg_response, use_this_image_pil):
     the_png_conversion = np.array(
         the_png_conversion.convert("L")
     ) # autotrace guarantees they're the same size
+    # ^ double check this
     
     # 0 is better (less distance)
     frobenius_distance = scale_frobenius_distance(
