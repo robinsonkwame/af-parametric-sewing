@@ -11,6 +11,7 @@ import random
 # from Prashnani (2018) PieAPP. CVPR 
 # # from https://prashnani.github.io/index_files/Prashnani_CVPR_2018_PieAPP_paper.pdf
 # ... "In this paper, we use the Bradley-Terry (BT) sigmoid model [9] for h," (pg 3)
+#
 # ^ probability, so [0, 1]
 # note: they fram in terms of (R)eference image, (A) the left image, (B) the right image
 # and estimate P AB( perceptual error S_A, S_B)
@@ -42,8 +43,24 @@ def from_spaces(a_sampled_space, signature):
     }
 
 def call_autotrace(use_this_image, use_these_arguments, endpoint=THE_ENDPOINT_WE_WANT, signature=ARGUMENT_SIGNATURE):
+    def prepare_multipart_data(file_dict, argument_dict):
+        data = {}
 
-    the_file_and_arguments = {
+        # Add file entries to the data dictionary
+        for key, value in file_dict.items():
+            data[key] = value
+        
+        # Add argument entries to the data dictionary
+        for key, value in argument_dict.items():
+            # Prepend the key with '-' and convert it to the suitable form
+            param_key = f"-{key}"
+            param_value = (None, value)
+
+            data[param_key] = param_value
+
+        return data
+    
+    the_file_argument = {
             'a_file': (
                 use_this_image, 
                 open(use_this_image, 'rb'),
@@ -51,26 +68,16 @@ def call_autotrace(use_this_image, use_these_arguments, endpoint=THE_ENDPOINT_WE
             )
         }
 
-    the_file_and_arguments.update(
-        {
-            key: (None, value) for key, value in use_these_arguments.items()
-        }
+    the_multi_part_data = prepare_multipart_data(
+        file_dict=the_file_argument,
+        argument_dict=use_these_arguments
     )
 
-    print(the_file_and_arguments)
+    print(the_multi_part_data)
 
     response = requests.post(
         endpoint['base_url']+'/'+endpoint['the_endpoint'],
-        files= the_file_and_arguments,        
-        # files={
-        #     'a_file': (
-        #         use_this_image, 
-        #         open(use_this_image, 'rb'),
-        #         'image/png'
-        #     )
-        # },
-        #params=use_these_arguments
-        #data=use_these_arguments
+        files= the_multi_part_data,
     )
 
     return response
@@ -92,33 +99,31 @@ def get_quick_image_score(a_svg_response, use_this_image_pil, index):
 
     # Scale the Frobenius distance between 0 and 1
     def scale_frobenius_distance(image1, image2):
-        max_distance = 255 #np.sqrt(np.sum(np.square(image1.max() - image2.min())))
+        max_distance = 2*255 #np.sqrt(np.sum(np.square(image1.max() - image2.min())))
         frobenius_norm = frobenius_distance(image1, image2)
         scaled_distance = frobenius_norm / max_distance
         return scaled_distance
 
-    # ... so there's a lot to conceptually think through but
+    the_png_conversion.save(f"TEST_converted_image-{index}.png")
+    #use_this_image_pil.save(f"TEST_source_image-{index}.png")
+
     # for now it's simplest to convert both to grayscale and work from there
     # This does obsfucate the space that the RL algorithm and the score are
     # working to and from but I think it'll be okay
-    # if use_this_image_pil.mode > the_png_conversion.mode:
-    #         use_this_image_pil = use_this_image_pil.convert("L")
-    # elif the_png_conversion.mode > use_this_image_pil.mode:
-    #         the_png_conversion = the_png_conversion.convert("L")
-
-    the_png_conversion.save(f"TEST_converted_image-{index}.png")
-    use_this_image_pil.save(f"TEST_source_image-{index}.png")
-
     use_this_image_pil = np.array(
         use_this_image_pil.convert("L")
     )
     the_png_conversion = np.array(
         the_png_conversion.convert("L")
     ) # autotrace guarantees they're the same size
-    # ^ double check this
     
-    # 0 is better (less distance)
-    frobenius_distance = scale_frobenius_distance(
+    # # 0 is better (less distance)
+    # frobenius_distance = scale_frobenius_distance(
+    #     use_this_image_pil,
+    #     the_png_conversion
+    # )
+    # Something is off w the scaling logic so we just return the value
+    distance_from_source_to_conversion = frobenius_distance(
         use_this_image_pil,
         the_png_conversion
     )
@@ -127,10 +132,10 @@ def get_quick_image_score(a_svg_response, use_this_image_pil, index):
     print(
         the_png_conversion.shape,
         use_this_image_pil.shape,
-        frobenius_distance
+        distance_from_source_to_conversion
     )
 
-    return frobenius_distance
+    return distance_from_source_to_conversion
 
 def handle_mime_svg_xml(response, apply_this_function, **kwargs):
     """

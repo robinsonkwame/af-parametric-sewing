@@ -139,6 +139,7 @@ class AutoTrace(Env):
         """
         Interact with endpoint, handle result to obtain reward score
         """
+        MAX_DISTANCE = 500
         the_reward = 0
         STATUS = 'status'
         SCORE_KEY = 'frobenius_distance'
@@ -157,15 +158,18 @@ class AutoTrace(Env):
                 use_this_image_pil=self.source_png_file,
                 index=self.number_of_episodes_ran
             )
-            print(
-                endpoint_response[STATUS],
-                endpoint_response[SCORE_KEY],
-                endpoint_response["response"][-100:]
-            )
+
             # The endpoint returns normalized 0-1 difference, with 0 being better
             # so we reverse map (yes I know the operationalization is mucking
             # severeal concepts)
-            the_reward = 1 - endpoint_response[SCORE_KEY]
+            the_reward = MAX_DISTANCE - endpoint_response[SCORE_KEY]
+            if the_reward < 0:
+                the_reward = 0
+
+        print(
+            endpoint_response[STATUS],
+            the_reward
+        )
 
         return the_reward
         #return stub_perceptual_score(self.the_current_action)
