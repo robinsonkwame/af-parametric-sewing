@@ -141,7 +141,7 @@ PARAMETERS_TO_SPACES = {
     "centerline":  rule_for_boolean(),
     "line-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-threshold']),
     "noise-removal": rule_for_real_type(ARGUMENT_PROPERTIES['noise-removal']),
-    #"preserve-width":  rule_for_boolean(), # crashes cairo svg2png?
+    "preserve-width":  rule_for_boolean(), # crashes cairo svg2png?
     #-color-count number of colors a color bitmap is reduced to, it does not work on grayscale, allowed are 1..256        
     "width-weight-factor": rule_for_real_type(ARGUMENT_PROPERTIES["width-weight-factor"]),
     "remove-adjacent-corners":  rule_for_boolean(),

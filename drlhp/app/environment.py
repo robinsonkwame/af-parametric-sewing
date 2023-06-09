@@ -137,7 +137,7 @@ class AutoTrace(Env):
         """
         Interact with endpoint, handle result to obtain reward score
         """
-        MAX_DISTANCE = 500
+        MAX_DISTANCE = 1000 #500
         the_reward = 0
         STATUS = 'status'
         SCORE_KEY = 'frobenius_distance'
