@@ -139,6 +139,14 @@ NUMBER_OF_BINS_FOR = {
 PARAMETERS_TO_SPACES = {
     "background-color": rule_for_background_color(),
     "centerline":  rule_for_boolean(),
+    "line-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-threshold']),
+    "noise-removal": rule_for_real_type(ARGUMENT_PROPERTIES['noise-removal']),
+    #"preserve-width":  rule_for_boolean(), # crashes cairo svg2png?
+    #-color-count number of colors a color bitmap is reduced to, it does not work on grayscale, allowed are 1..256        
+    "width-weight-factor": rule_for_real_type(ARGUMENT_PROPERTIES["width-weight-factor"]),
+    "remove-adjacent-corners":  rule_for_boolean(),
+    "tangent-surround": rule_for_unsigned(ARGUMENT_PROPERTIES['tangent-surround']),
+    "corner-threshold": rule_for_unsigned(ARGUMENT_PROPERTIES['corner-threshold']),
     "remove-adjacent-corners":  rule_for_boolean(),
     "filter-iterations": rule_for_unsigned(ARGUMENT_PROPERTIES['filter-iterations']),
     "line-reversion-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-reversion-threshold']),
@@ -147,21 +155,3 @@ PARAMETERS_TO_SPACES = {
     "error-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['error-threshold'])
 
 }
-
-# action_space = discretize_dict_space(
-#     PARAMETERS_TO_SPACES,
-#     NUMBER_OF_BINS_FOR
-# )['MultiDiscretizedDictSpace']
-
-# the_sample = action_space.sample()
-
-# converted = convert_sample_to_a_dict_sample(
-#     the_sample,
-#     PARAMETERS_TO_SPACES,
-#     NUMBER_OF_BINS_FOR
-# )
-
-# print(
-#     the_sample,
-#     converted
-# )

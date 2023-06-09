@@ -6,7 +6,7 @@ from PIL import Image
 from gym.spaces import Box, Dict
 import numpy as np
 import random
-
+from xml.etree.ElementTree import ParseError
 
 # from Prashnani (2018) PieAPP. CVPR 
 # # from https://prashnani.github.io/index_files/Prashnani_CVPR_2018_PieAPP_paper.pdf
@@ -84,7 +84,18 @@ def call_autotrace(use_this_image, use_these_arguments, endpoint=THE_ENDPOINT_WE
 
 def get_quick_image_score(a_svg_response, use_this_image_pil, index):
     the_svg_data = a_svg_response
-    the_png_conversion = cairosvg.svg2png(bytestring=the_svg_data)
+    # NOTE: I had thought -background-color in `autotrace`
+    # was this same argument but there it is the color to ignore
+    # so we hard code it here (?)
+    try:
+        the_png_conversion = cairosvg.svg2png(
+            bytestring=the_svg_data,
+            background_color='white'
+        )
+    except ParseError:
+        print("\t PARSE ERROR; returning 10e3 distance!")
+        return 10e3
+
     the_png_conversion = Image.open(
             io.BytesIO(
                 the_png_conversion
