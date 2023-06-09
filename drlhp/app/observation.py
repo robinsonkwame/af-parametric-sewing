@@ -104,7 +104,7 @@ def get_quick_image_score(a_svg_response, use_this_image_pil, index):
         scaled_distance = frobenius_norm / max_distance
         return scaled_distance
 
-    the_png_conversion.save(f"TEST_converted_image-{index}.png")
+    the_png_conversion.save(f"./videos/frame_{index}.png")
     #use_this_image_pil.save(f"TEST_source_image-{index}.png")
 
     # for now it's simplest to convert both to grayscale and work from there
@@ -165,19 +165,3 @@ def convert_png_to_image(file_path):
     return Image.open(
         file_path
     )
-
-# so ... this should be memoized, esp at scale
-
-# Env provides sampled arguments as sample_arguments and the file to use
-#
-# THE_FILE_TO_USE = '/tmp/square.png'
-# the_png_conversion = convert_png_to_image(THE_FILE_TO_USE)
-# use_these_arguments = sample_to_autotrace(sample_arguments)
-# response = call_autotrace(THE_FILE_TO_USE, use_these_arguments="")
-# handle_mime_svg_xml(
-#     response, 
-#     apply_this_function=get_quick_image_score, 
-#     use_this_image_pil=the_png_conversion
-# )
-# ^ pass response back to environment so that the agent/policy can interpret
-

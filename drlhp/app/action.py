@@ -45,7 +45,12 @@ def convert_sample_to_a_dict_sample(sample, dict_space, bins):
             )
         elif isinstance(space, Discrete):
             if space.n > 2:
-                dict_sample[key] = value + item.get('start', 0)
+                dict_sample[key] = value
+                #if 'start' in space: # <-- how did this even work before?
+                if 'start' in item: # integer
+                    dict_sample[key] += item.get('start', 0)
+                if 'index_only' in item and 'list_of_categories' in item: # categorical
+                    dict_sample[key] = item['list_of_categories'][value-1] # index into the space
             else:
                 dict_sample[key] = value == 1 # boolean
         else:
@@ -84,27 +89,34 @@ def rule_for_real_type(the_doc_key):
         lower, upper
     )
 
-def rule_for_background_color(the_doc_key):
+BACKGROUND_COLORS = [
+        "#FFFFFF",
+        "#F2F2F2",
+        "#DCDCDC",
+        "#C0C0C0",
+        "#808080",
+        "#696969",
+        "#A9A9A9",
+        "#708090",
+        "#A8A8A8",
+        "#6B5433"
+    ]
+
+def rule_for_background_color(the_colors=BACKGROUND_COLORS):
     """
     From white to grayish brown
     """
     return {
-        "White": "#FFFFFF",
-        "Light Gray": "#F2F2F2",
-        "Gainsboro": "#DCDCDC",
-        "Silver": "#C0C0C0",
-        "Gray": "#808080",
-        "Dim Gray": "#696969",
-        "Dark Gray": "#A9A9A9",
-        "Slate Gray": "#708090",
-        "Grayish": "#A8A8A8",
-        "Grayish Brown":" #6B543"
+        'space': Discrete(len(the_colors)),
+        'index_only': True, # sample to argumnet converter will just index
+        'list_of_categories': the_colors
     }
 
 def rule_for_color_count():
-    return (
-        1, 256
-    )
+    return {
+        'space': Discrete(256),
+        'index_only': True
+    }
 
 @return_discrete
 def rule_for_boolean():
@@ -125,10 +137,31 @@ NUMBER_OF_BINS_FOR = {
 }
 
 PARAMETERS_TO_SPACES = {
+    "background-color": rule_for_background_color(),
     "centerline":  rule_for_boolean(),
+    "remove-adjacent-corners":  rule_for_boolean(),
     "filter-iterations": rule_for_unsigned(ARGUMENT_PROPERTIES['filter-iterations']),
     "line-reversion-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['line-reversion-threshold']),
     "corner-always-threshold": rule_for_unsigned(ARGUMENT_PROPERTIES['corner-always-threshold']),
     "corner-surround": rule_for_unsigned(ARGUMENT_PROPERTIES['corner-surround']),
     "error-threshold": rule_for_real_type(ARGUMENT_PROPERTIES['error-threshold'])
+
 }
+
+# action_space = discretize_dict_space(
+#     PARAMETERS_TO_SPACES,
+#     NUMBER_OF_BINS_FOR
+# )['MultiDiscretizedDictSpace']
+
+# the_sample = action_space.sample()
+
+# converted = convert_sample_to_a_dict_sample(
+#     the_sample,
+#     PARAMETERS_TO_SPACES,
+#     NUMBER_OF_BINS_FOR
+# )
+
+# print(
+#     the_sample,
+#     converted
+# )

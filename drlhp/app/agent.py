@@ -6,11 +6,12 @@ from gym.wrappers import Monitor
 # Trying to monitor an environment which has no 'spec' set. This usually means you 
 # did not create it via 'gym.make', and is recommended only for advanced users.
 
-THE_FILE_TO_USE = '/tmp/square.png'
+#THE_FILE_TO_USE = '/tmp/square.png'
+THE_FILE_TO_USE = '/tmp/sleeve.png'
 env = AutoTrace(source_filepath=THE_FILE_TO_USE)
 env = Monitor(env, "./logs", force=True)
 
-n_steps = 5
+n_steps = 100
 
 model = PPO(
     "MlpPolicy",

@@ -18,7 +18,7 @@ from observation import (
 )
 
 class VideoRecorder:
-    def __init__(self, output_file="video.mp4", output_dir="./videos/", fps=20):
+    def __init__(self, output_file="video.mp4", output_dir="./videos/", fps=10):
         self.output_file = output_file
         self.output_dir = output_dir
         self.fps = fps
@@ -33,24 +33,20 @@ class VideoRecorder:
         self.frame_count += 1
     
     def create_video(self):
-
-        # WHY IS THIS GETTING HIT TWICE?
-        print("\n\t SKIPPING VIDEO CREATION")
-
-        # cmd = [
-        #     "ffmpeg",
-        #     "-y",
-        #     "-framerate",
-        #     str(self.fps),
-        #     "-i",
-        #     f"{self.output_dir}frame_%d.png",
-        #     "-c:v",
-        #     "libx264",
-        #     "-pix_fmt",
-        #     "yuv420p",
-        #     self.file_path
-        # ]
-        # subprocess.run(cmd)
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            str(self.fps),
+            "-i",
+            f"{self.output_dir}frame_%d.png",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            self.file_path
+        ]
+        return_code = subprocess.run(cmd)
 
         png_files = glob.glob(f"{self.output_dir}/*.png")
         # Delete each PNG file
@@ -114,10 +110,12 @@ class AutoTrace(Env):
             "autotrace_parameters": self.the_current_action,
         }
 
-        # Add frame to video recorder
-        self.video_recorder.add_frame(
-            self.render(mode="rgb_array")
-        )
+        # TODO: fix up to use write from observation, get_quick_image_score
+        #
+        # # Add frame to video recorder
+        # self.video_recorder.add_frame(
+        #     self.render(mode="rgb_array")
+        # )
 
         return the_next_observation, reward, done, info
 
@@ -176,7 +174,7 @@ class AutoTrace(Env):
     
     def _stub_done(self):
         done = False
-        if self.number_of_episodes_ran > 50:
+        if self.number_of_episodes_ran > 1000:
             done = True
 
         # see https://stackoverflow.com/questions/71786530/rollout-summary-statistics-not-being-monitored-for-customenv-using-stable-baseli
