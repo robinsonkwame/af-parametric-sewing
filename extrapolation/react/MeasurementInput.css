@@ -1,0 +1,12 @@
+div {
+    background: gray;
+    width: 110px;
+    border-radius: 0.5rem;
+    -moz-border-radius: 1rem;
+    padding: 0.5rem;
+  }
+  input[type="number"] {
+    padding: 0.5rem;
+    line-height: 1.5;
+    background-color: white;
+  }

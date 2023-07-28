@@ -1,0 +1,19 @@
+.inline-block {
+    display: inline-block;
+  }
+  .measurement-text {
+    font-size: 0.6rem;
+  }
+  .spinner-container {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    font-weight: bold;
+    font-size: 20px;
+    color: orange;
+  }
+  label {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+  }

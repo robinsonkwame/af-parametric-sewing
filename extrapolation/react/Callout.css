@@ -1,0 +1,20 @@
+.make_abs {
+    position: fixed;
+  }
+  .Handle {
+    width: 18px;
+    height: 8px;
+    border: solid 1px black;
+    background: orange;
+    cursor: move;
+    opacity: 0.5;
+  }
+  :global([draggable]) {
+    -webkit-touch-callout: none;
+    -ms-touch-action: none;
+    touch-action: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }

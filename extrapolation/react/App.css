@@ -1,0 +1,12 @@
+.parent-container {
+    height: 690px;
+    width: auto;
+    position: relative;
+    background-image: url("https://raw.githubusercontent.com/robinsonkwame/csdt-af-sewing/main/static/front-model-only-standing.jpg");
+    background-size: auto 690px;
+    background-repeat: no-repeat;
+  }
+  
+  .spinner {
+    position: absolute;
+  }
