@@ -1,2 +1,2 @@
-# csdt-af-sewing
+# af-parametric-sewing
 Repository for AF related sewing HCI tech
