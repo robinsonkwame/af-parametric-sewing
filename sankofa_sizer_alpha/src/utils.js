@@ -48,7 +48,7 @@ export const parts = writable([
 		selected: false, 
 		type: 'horizontal'
 	},{
-		name: 'Wrist width',
+		name: 'Wrist',
 		id: 3,
 		x: 0, 
 		y: 0, 
@@ -58,7 +58,51 @@ export const parts = writable([
 		 actual_length: 8,		
 		selected: false, 
 		type: 'horizontal'
-	}		
+	},{
+		name: 'Ankle',
+		id: 4,
+		x: 0, 
+		y: 0, 
+  	lineX: 0,
+	  lineY: 0,
+	  virtual_length: 8, // inches
+		 actual_length: 8,		
+		selected: false, 
+		type: 'horizontal'
+	},{
+		name: 'Inseam',
+		id: 5,
+		x: 0, 
+		y: 0, 
+  	lineX: 0,
+	  lineY: 0,
+	  virtual_length: 8, // inches
+		 actual_length: 8,		
+		selected: false, 
+		type: 'vertical'
+	},{
+		name: 'Knee',
+		id: 6,
+		x: 0, 
+		y: 0, 
+  	lineX: 0,
+	  lineY: 0,
+	  virtual_length: 8, // inches
+		 actual_length: 8,		
+		selected: false, 
+		type: 'horizontal'
+	},{
+		name: 'Seatback',
+		id: 7,
+		x: 0, 
+		y: 0, 
+  	lineX: 0,
+	  lineY: 0,
+	  virtual_length: 8, // inches
+		 actual_length: 8,		
+		selected: false, 
+		type: 'horizontal'
+	}
 ]);
 
 
@@ -204,15 +248,19 @@ export const bartol_to_part = {
 const shoulder_to_wrist = "shoulder_to_wrist"
 const bicep = "bicep"
 const wrist = "wrist"
+const ankle = "ankle"
+const	inseam = "inseam"
+const knee = "knee"
+const seatback = "seatback"
 
 export const checkboxStates = [
 	shoulder_to_wrist,  // note to self, should really be using const varibale names; tracking this bug cost me 2 h :_(
 	bicep,
 	wrist,
-	"ankle",
-	"inseam",
-	"knee",
-	"seatback"
+	ankle,
+	inseam,
+	knee,
+	seatback
 ]
 
 // TODO: finish after demo given
@@ -220,4 +268,8 @@ export const checkBoxToPartId = {
 	shoulder_to_wrist: 1,
 	bicep: 2,
 	wrist: 3,
+	ankle: 4,
+	inseam: 5,
+	knee: 6,
+	seatback: 7	
 }

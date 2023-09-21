@@ -27,7 +27,7 @@
 	}
 
 	const handleCheck = (bodyPart) => {
-		// we operate on a reactive variable, although that said this is kliudgy
+		// we operate on a reactive variable, although that said this is kludgy
 		function setSelectedById(array, id) {
 				for(let i = 0; i < array.length; i++){
 						if(array[i].id === id){
