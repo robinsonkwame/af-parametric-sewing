@@ -6,7 +6,7 @@ import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
 import { OrbitControls } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls";
 import { OBJLoader } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/OBJLoader";
 
-import { printme, euclidean } from './geodesic.js' 
+import { euclidean } from './geodesic.js' 
 
 // Set up a canvas with higher pixel density
 function setupCanvas() {
@@ -123,55 +123,12 @@ function createLine(scene) {
   return line;
 }
 
-function getIntersections(event, camera, scene) {
-  const vector = new THREE.Vector2(
-    (event.clientX / window.innerWidth) * 2 - 1,
-    -(event.clientY / window.innerHeight) * 2 + 1
-  );
-
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(vector, camera);
-
-  const intersects = raycaster.intersectObjects(scene.children);
-  return intersects;
-}
-
-function setLine(vectorA, vectorB, line) {
-  line.geometry.attributes.position.setXYZ(0, vectorA.x, vectorA.y, vectorA.z);
-  line.geometry.attributes.position.setXYZ(1, vectorB.x, vectorB.y, vectorB.z);
-  line.geometry.attributes.position.needsUpdate = true;
-}
-
-function onMouseDown(event, handleClicks, markers, line, camera, scene) {
-  const { points, clicks } = handleClicks;
-  const intersects = getIntersections(event, camera, scene);
-
-  if (intersects.length > 0) {
-    points[clicks].copy(intersects[0].point);
-    markers[clicks].position.copy(intersects[0].point);
-
-    setLine(intersects[0].point, intersects[0].point, line);
-    handleClicks.clicks++;
-
-    if (handleClicks.clicks > 1) {
-      const fake_scale = 10 / 9;
-      const distance = points[0].distanceTo(points[1]);
-      distancePlace.innerText = `${(fake_scale * distance).toFixed(2)} inches`;
-
-      setLine(points[0], points[1], line);
-      handleClicks.clicks = 0;
-    }
-  }
-}
-
 function setupMouseDown(scene, camera) {
   const handleClicksData = handleClicks();
 
   const markers = createMarkers(scene);
   const line = createLine(scene);
 
-  //const onMouseDownHandler = (event) =>
-  //  onMouseDown(event, handleClicksData, markers, line, camera, scene);
   const onMouseDownHandler = (event) =>
     euclidean(THREE, event, handleClicksData, markers, line, camera, scene);    
   document.addEventListener("mousedown", onMouseDownHandler, false);
@@ -199,5 +156,4 @@ function main() {
   animate();
 }
 
-console.clear();
 main();
