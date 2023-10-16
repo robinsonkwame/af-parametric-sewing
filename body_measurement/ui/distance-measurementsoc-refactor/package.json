@@ -1,0 +1,16 @@
+{
+  "name": "distance-measurementsoc-refactor",
+  "version": "1.0.0",
+  "description": "A Pen created on CodePen.io. Original URL: [https://codepen.io/Kwame-Porter-Robinson/pen/poqXzKa](https://codepen.io/Kwame-Porter-Robinson/pen/poqXzKa).",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}
