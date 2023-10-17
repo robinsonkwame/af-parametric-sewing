@@ -6,7 +6,9 @@ import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
 import { OrbitControls } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls";
 import { OBJLoader } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/OBJLoader";
 
-import { euclidean } from './geodesic.js' 
+import { initialize_geodesic_service, geodesic_service, obj_path, obj_file} from './geodesic.js' 
+
+let loadedObject;
 
 // Set up a canvas with higher pixel density
 function setupCanvas() {
@@ -66,9 +68,9 @@ function adjustCameraToCenter(camera, object) {
 function loadObject(scene, camera) {
   var objLoader = new OBJLoader();
   objLoader.setPath(
-    "https://raw.githubusercontent.com/robinsonkwame/static/main/"
+    obj_path
   );
-  objLoader.load("female_output.obj", function (object) {
+  objLoader.load(obj_file, function (object) {
     var material = new THREE.MeshPhongMaterial({
       color: 0x8b6647,
       transparent: true,
@@ -81,6 +83,8 @@ function loadObject(scene, camera) {
       }
     });
     object.scale.set(20, 20, 20);
+
+    loadedObject = object; // Set the loaded object as a global variable
 
     scene.add(object);
     adjustCameraToCenter(camera, object);
@@ -130,7 +134,7 @@ function setupMouseDown(scene, camera) {
   const line = createLine(scene);
 
   const onMouseDownHandler = (event) =>
-    euclidean(THREE, event, handleClicksData, markers, line, camera, scene);    
+    geodesic_service(THREE, loadedObject, event, handleClicksData, markers, line, camera, scene)
   document.addEventListener("mousedown", onMouseDownHandler, false);
 }
 
@@ -144,6 +148,8 @@ function main() {
 
   setupLighting(scene);
   loadObject(scene, camera);
+
+  initialize_geodesic_service(obj_path, obj_file); // should point to same obj as loadObject
 
   setupMouseDown(scene, camera);
 
