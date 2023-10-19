@@ -13,6 +13,11 @@ import {
 } from './geodesic.js' 
 
 let loadedObject;
+let camera;
+let scene;
+let markers = []; // Array to store markers
+let previousClick = null;
+let meshIndex = -1
 
 // Set up a canvas with higher pixel density
 function setupCanvas() {
@@ -23,12 +28,12 @@ function setupCanvas() {
 }
 
 function setupScene() {
-  var scene = new THREE.Scene();
+  scene = new THREE.Scene();
   return scene;
 }
 
 function setupCamera(width, height) {
-  var camera = new THREE.PerspectiveCamera(
+  camera = new THREE.PerspectiveCamera(
     34,
     window.innerWidth / window.innerHeight,
     0.1,
@@ -93,27 +98,12 @@ function loadObject(scene, camera, positionToIndex) {
         child.material = material;
       }
     });
-    //object.scale.set(20, 20, 20);
     object.scale.set(20, 20, 20);
-
-    // // add edge geom to help viewing
-    // const edges = new THREE.EdgesGeometry( object.children[0].geometry );
-    // const line = new THREE.LineSegments(
-    //   edges, 
-    //   new THREE.LineBasicMaterial( 
-    //     { 
-    //       side: THREE.BackSide,
-    //       color: 0xffffff,
-    //       opacity: .25
-    //     } ) 
-    //   );
-
-    // line.scale.set(20,20,20)
-    // scene.add( line );
 
     loadedObject = object; // for ray trace intersection with face -> vertex -> .obj vertex
 
     scene.add(object);
+    meshIndex = scene.children.length - 1; // should be 5 or thereabouts
   });
 }
 
@@ -160,10 +150,86 @@ function setupMouseDown(scene, camera) {
   const markers = createMarkers(scene);
   const line = createLine(scene);
 
-  const onMouseDownHandler = (event) =>
-    geodesic_service(THREE, loadedObject, event, handleClicksData, markers, line, camera, scene)
-  document.addEventListener("mousedown", onMouseDownHandler, false);
+  //const onMouseDownHandler = (event) =>
+  //  geodesic_service(THREE, loadedObject, event, handleClicksData, markers, line, camera, scene)
+  //document.addEventListener("mousedown", onMouseDownHandler, false);
 }
+
+function createRedSphere(point, scene){
+  const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.7 });
+  material.raycast = false;
+  const geometry = new THREE.SphereGeometry(0.1, 32, 32);
+  const marker = new THREE.Mesh(geometry, material);
+  marker.position.copy(point);
+  scene.add(marker);
+
+  return marker;
+}
+
+function markIntersection(scene, intersectionPoint, mesh) {
+  if (markers.length >= 2) {
+    // Remove the oldest marker when the buffer is full
+    const removedMarker = markers.shift();
+    scene.remove(removedMarker.sphere);
+  }
+
+  const marker = createRedSphere(intersectionPoint, scene)
+
+  markers.push({ point: intersectionPoint, sphere: marker });
+
+  if (markers.length === 2) {
+    // Call the geodesic_service function when there are two markers
+    call_geodesic_service(markers[0].point, markers[1].point);
+
+    // Clear the markers buffer
+    markers.forEach((marker) => {
+      scene.remove(marker.sphere);
+    });
+    markers = [];
+  }
+}
+
+function clearMarkers(scene) {
+  // Clear all markers from the scene and the buffer
+  markers.forEach((marker) => {
+    scene.remove(marker.sphere);
+  });
+  markers = [];
+}
+
+function getIntersections(event, camera, scene) {
+  const vector = new THREE.Vector2(
+    (event.clientX / window.innerWidth) * 2 - 1,
+    -(event.clientY / window.innerHeight) * 2 + 1
+  );
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(vector, camera);
+  if(scene){
+    const intersects = raycaster.intersectObjects(scene.children[meshIndex].children);
+
+    return intersects;
+  }
+
+}
+
+// Add a click event listener to remove markers on a single click
+window.addEventListener('click', (event) => {
+  // Check for intersections
+  const intersections = getIntersections(event, camera, scene);
+  if (intersections.length > 0) {
+    markIntersection(scene, intersections[0].point, intersections[0].object);
+  } else {
+    clearMarkers(scene);
+  }
+});
+
+// Function to call the geodesic service
+function call_geodesic_service(point1, point2) {
+  // Your geodesic service logic here
+  console.log("would call geodesic stuff here")
+}
+
 
 function main() {
   const { pixelRatio, canvas } = setupCanvas();
