@@ -195,12 +195,18 @@ function handle_geodesic(line, scene) {
 
 export function geodesic_service(THREE, loadedObject, event, handleClicks, markers, line, camera, scene) {
   function getClosestVertexIndex(intersection, object) {
+    /*
     let closestVertexIndex = -1;
     const fixed_n = 8;
     const faceIndex = intersection.faceIndex;
     const geometry = object.geometry;
     const vertices = geometry.attributes.position.array;
   
+    // we can get real close, in local mesh tersm, with 
+    // intersection.object.worldToLocal(intersection.point)
+    //
+    // but this does not alias or index to the point
+
     const iA = faceIndex * 3;
     const iB = iA + 1 * 3;
     const iC = iA + 2 * 3;// because the vertices array is contigious groups of 3, X, Y, and Z
@@ -212,8 +218,10 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
     console.log(
       `\nfrom face ${faceIndex}, we have vertexA ${vertexA.x}, ${vertexA.y}, ${vertexA.z}`,
       `\nfrom face ${faceIndex}, we have vertexB ${vertexB.x}, ${vertexB.y}, ${vertexB.z}`,
-      `\nfrom face ${faceIndex}, we have vertexC ${vertexC.x}, ${vertexC.y}, ${vertexC.z}`,      
+      `\nfrom face ${faceIndex}, we have vertexC ${vertexC.x}, ${vertexC.y}, ${vertexC.z}`
     )
+
+    // object.worldToLocal(new THREE.Vector3(vertices[iA], vertices[iA + 1], vertices[iA + 2]);)
 
     // Calculate the world positions of the vertices
     object.localToWorld(vertexA);
@@ -238,11 +246,65 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
       closestVertexIndex = iC / 3;
       closestVertex = new THREE.Vector3(vertices[iC], vertices[iC + 1], vertices[iC + 2]);
     }
-  
+    */
+    const face = intersection.face;
+    const geometry = intersection.object.geometry;
+    const position = geometry.attributes.position;    
+    const fixed_n = 8;
+    let closestVertexIndex = -1;
+    
+    /*
+    const vertexAIndex = mesh.geometry.index.array[face.a];
+    const vertexBIndex = mesh.geometry.index.array[face.b];
+    const vertexCIndex = mesh.geometry.index.array[face.c];
+    
+    // Get the local vertex coordinates
+    const vertexA = mesh.geometry.attributes.position.array.slice(vertexAIndex * 3, vertexAIndex * 3 + 3);
+    const vertexB = mesh.geometry.attributes.position.array.slice(vertexBIndex * 3, vertexBIndex * 3 + 3);
+    const vertexC = mesh.geometry.attributes.position.array.slice(vertexCIndex * 3, vertexCIndex * 3 + 3);
+    */
+
+    const vertexA = new THREE.Vector3();
+    const vertexB = new THREE.Vector3();
+    const vertexC = new THREE.Vector3();
+
+    vertexA.fromBufferAttribute(position, face.a)
+    vertexB.fromBufferAttribute(position, face.b)
+    vertexC.fromBufferAttribute(position, face.c)    
+
+    // Convert the intersection point to local space
+    const localIntersectionPoint = intersection.object.worldToLocal(intersection.point);
+    
+    const distanceA = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexA));
+    const distanceB = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexB));
+    const distanceC = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexC));
+    
+    // Find the closest vertex
+    let closestVertex;
+    let minDistance = Number.MAX_VALUE;
+    
+    if (distanceA < minDistance) {
+      minDistance = distanceA;
+      closestVertex = vertexA;
+    }
+    if (distanceB < minDistance) {
+      minDistance = distanceB;
+      closestVertex = vertexB;
+    }
+    if (distanceC < minDistance) {
+      closestVertex = vertexC;
+    }
+    
+    // 'closestVertex' now contains the local coordinates of the closest vertex to the intersection point.
+
     // translate the three js vertex position to the obj vertex index
     let positionKey = `${closestVertex.x.toFixed(fixed_n)},${closestVertex.y.toFixed(fixed_n)},${closestVertex.z.toFixed(fixed_n)}`
     if(positionToIndex.has(positionKey)){
       closestVertexIndex = positionToIndex.get(positionKey)
+      console.log(
+        `... found ${closestVertexIndex} as the closest vertext`,
+        `\t it has this position ${positionKey}`
+        )
     }
     else{
       closestVertexIndex = -1;
