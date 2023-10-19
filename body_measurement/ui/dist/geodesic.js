@@ -1,3 +1,5 @@
+import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
+
 const uploadUrl = "http://192.168.0.101:8000/upload";
 const solveUrl = "http://192.168.0.101:8000/solve";
 export const obj_path = "https://raw.githubusercontent.com/robinsonkwame/static/main/"
@@ -17,7 +19,6 @@ function hasInvalidVertex() {
 }
 
 function updateVertexInfo(vertexId) {
-  console.log(vertexInfo)
   if(vertexId === -1){
     // we wipe everything
     vertexInfo.currentVertex = 1;
@@ -34,7 +35,6 @@ function updateVertexInfo(vertexId) {
     vertexInfo.vertexId2 = vertexId;
     vertexInfo.currentVertex = 1;
   }
-  console.log(vertexInfo)  
 }
 
 const makeVertexKey = (vertices, idx) => {
@@ -86,39 +86,6 @@ export function initialize_geodesic_service(obj_path, obj_file) {
     
 }
 
-/*
-export function solve_geodesic_service(v_start, v_end) {
-  // call out to python microservice
-  const requestUrl = `${solveUrl}?v_start=${v_start}&v_end=${v_end}`;
-
-  const requestOptions = {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  };
-  
-  let path_pts;
-  fetch(requestUrl, requestOptions)
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      } else {
-        throw new Error(`Failed to find a path from v_start=${v_start} to v_end=${v_end}`);
-      }
-    })
-    .then(data => {
-      // Handle the response data as needed
-      console.log(data);
-    })
-    .catch(error => {
-      console.error(error);
-    });
-
-    return path_pts;
-}
-*/
-
 export function solve_geodesic_service(v_start, v_end) {
   const requestUrl = `${solveUrl}?v_start=${v_start}&v_end=${v_end}`;
 
@@ -142,14 +109,83 @@ export function solve_geodesic_service(v_start, v_end) {
     });
 }
 
+function createGeodesicLineWithLabel(path_pts, scene, camera) {
+  const material = new THREE.LineDashedMaterial({
+    color: 0xFFA500, // Bright orange color
+    linewidth: 200, // Line width
+    scale: 1, // The scale of the dashes
+    dashSize: 0.5, // Length of the dashes
+    gapSize: 0.25, // Gap between dashes
+    transparent: false, // Make it transparent
+    opacity: 0.7, // Opacity level
+  });
 
-function handle_geodesic(line) {
+  // Create an array to hold the Vector3 points
+  const points = [];
+
+  for (let i = 0; i < path_pts.length; i++) {
+    const [x, y, z] = path_pts[i];
+    points.push(new THREE.Vector3(x, y, z));
+  }
+
+  // Create the line geometry
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line = new THREE.Line(geometry, material);
+  //// Apply the world matrix transformation to the entire line (convert to world coordinates)
+  //line.applyMatrix4(scene.matrixWorld);  
+
+  // Add the line to the scene
+  scene.add(line);
+
+  /*
+  // Calculate the total path length
+  let totalPathLength = 0;
+
+  for (let i = 1; i < path_pts.length; i++) {
+    totalPathLength += path_pts[i].distanceTo(path_pts[i - 1]);
+  }
+
+  // Create a text sprite with the total path length
+  const label = createLabel(`Total Length: ${totalPathLength.toFixed(2)} inches`);
+
+  // Position the label at the center of the line
+  const midpointIndex = Math.floor(path_pts.length / 2);
+  const midpoint = path_pts[midpointIndex];
+  label.position.copy(midpoint);
+ 
+  // Add the label to the scene
+  scene.add(label);
+  */
+ 
+  // Mark both the line and label for an update
+  line.needsUpdate = true;
+  //label.needsUpdate = true;
+
+
+  // Function to create a text sprite
+  function createLabel(text) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = '12px Arial';
+    context.fillStyle = 'white';
+    context.textAlign = 'center';
+    context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(material);
+
+    sprite.scale.set(1, 0.5, 1);
+
+    return sprite;
+  }
+}
+
+function handle_geodesic(line, scene) {
   solve_geodesic_service(vertexInfo.vertexId1, vertexInfo.vertexId2)
-    .then(path_pts => {
-      if (path_pts) {
-        console.log("We'd do something with path_pts", path_pts);
-        // probably use worldcoordinates and then pass to Line
-        // as a path
+    .then(data => {
+      if (data) {
+        createGeodesicLineWithLabel(data['path_pts'], scene)
       }
     })
     .catch(error => {
@@ -173,6 +209,12 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
     const vertexB = new THREE.Vector3(vertices[iB], vertices[iB + 1], vertices[iB + 2]);
     const vertexC = new THREE.Vector3(vertices[iC], vertices[iC + 1], vertices[iC + 2]);
   
+    console.log(
+      `\nfrom face ${faceIndex}, we have vertexA ${vertexA.x}, ${vertexA.y}, ${vertexA.z}`,
+      `\nfrom face ${faceIndex}, we have vertexB ${vertexB.x}, ${vertexB.y}, ${vertexB.z}`,
+      `\nfrom face ${faceIndex}, we have vertexC ${vertexC.x}, ${vertexC.y}, ${vertexC.z}`,      
+    )
+
     // Calculate the world positions of the vertices
     object.localToWorld(vertexA);
     object.localToWorld(vertexB);
@@ -218,10 +260,18 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
   
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(vector, camera);
+
+    // Normalize the ray's direction by considering the scale factor
+    const mesh = scene.children
+    // //const scale = object.scale; shuold be pulled from scale.set etc
+    // const scale = 1;
+    // const invScale = new THREE.Vector3(1 / scale.x, 1 / scale.y, 1 / scale.z);
+    // raycaster.ray.direction.copy(vector).applyMatrix4(camera.matrixWorld).sub(camera.position).normalize();
+    // raycaster.ray.direction.multiply(invScale);    
   
-    const intersects = raycaster.intersectObjects(scene.children);
+    const intersects = raycaster.intersectObjects(mesh);
     return intersects;
-}
+  }
   
   function setLine(vectorA, vectorB, line) {
       line.geometry.attributes.position.setXYZ(0, vectorA.x, vectorA.y, vectorA.z);
@@ -257,7 +307,7 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
     )
     updateVertexInfo(index_at)
     if (!hasInvalidVertex()){
-      handle_geodesic(line)
+      handle_geodesic(line, scene)
       console.log(
         `start: ${vertexInfo.vertexId1}, end: ${vertexInfo.vertexId2}`
       )

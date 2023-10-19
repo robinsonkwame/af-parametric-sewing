@@ -34,8 +34,8 @@ function setupCamera(width, height) {
     0.1,
     1000
   );
-  camera.position.set(-5, 0, 40);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(5, 15, 6);
+  //camera.lookAt(1900, 0, 0);
   return camera;
 }
 
@@ -62,11 +62,18 @@ function setupLighting(scene) {
   scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 }
 
-function adjustCameraToCenter(camera, object) {
-  const boundingBox = new THREE.Box3().setFromObject(object);
-  const center = new THREE.Vector3();
-  boundingBox.getCenter(center);
-  camera.lookAt(center);
+function adjustCameraToCenter(camera) {
+  // const boundingBox = new THREE.Box3().setFromObject(object);
+  // const center = new THREE.Vector3();
+  // boundingBox.getCenter(center);
+
+  //camera.lookAt(center);
+ // Calculate a new target position 20% above the center
+ //const yOffset = boundingBox.getSize(new THREE.Vector3()).y * 10.2;
+ const targetPosition = new THREE.Vector3(0, 0, 0);
+
+ camera.lookAt(targetPosition);  
+ console.log("looking up?", targetPosition)
 }
 
 function loadObject(scene, camera, positionToIndex) {
@@ -78,7 +85,7 @@ function loadObject(scene, camera, positionToIndex) {
     var material = new THREE.MeshPhongMaterial({
       color: 0x8b6647,
       transparent: true,
-      opacity: 1.0
+      opacity: 0.5
     });
 
     object.traverse(function (child) {
@@ -86,11 +93,27 @@ function loadObject(scene, camera, positionToIndex) {
         child.material = material;
       }
     });
+    //object.scale.set(20, 20, 20);
     object.scale.set(20, 20, 20);
+
+    // // add edge geom to help viewing
+    // const edges = new THREE.EdgesGeometry( object.children[0].geometry );
+    // const line = new THREE.LineSegments(
+    //   edges, 
+    //   new THREE.LineBasicMaterial( 
+    //     { 
+    //       side: THREE.BackSide,
+    //       color: 0xffffff,
+    //       opacity: .25
+    //     } ) 
+    //   );
+
+    // line.scale.set(20,20,20)
+    // scene.add( line );
+
     loadedObject = object; // for ray trace intersection with face -> vertex -> .obj vertex
 
     scene.add(object);
-    adjustCameraToCenter(camera, object);
   });
 }
 
@@ -102,7 +125,8 @@ function handleClicks() {
 
 function createMarkers(scene) {
   const markerA = new THREE.Mesh(
-    new THREE.SphereGeometry(0.1, 10, 20),
+    //new THREE.SphereGeometry(0.1, 10, 20),
+    new THREE.SphereGeometry(0.1, 2, 5),
     new THREE.MeshBasicMaterial({ color: 0xff5555 })
   );
   const markerB = markerA.clone();
@@ -154,6 +178,8 @@ function main() {
 
   initialize_geodesic_service(obj_path, obj_file); // should point to same obj as loadObject
   initalizeVertexLookupTable(obj_path, obj_file)
+
+  //adjustCameraToCenter(camera); 
 
   setupMouseDown(scene, camera);
 
