@@ -113,7 +113,7 @@ function createGeodesicLineWithLabel(path_pts, scene, camera) {
   const material = new THREE.LineDashedMaterial({
     color: 0xFFA500, // Bright orange color
     linewidth: 200, // Line width
-    scale: 1, // The scale of the dashes
+    scale: 6, // The scale of the dashes
     dashSize: 0.5, // Length of the dashes
     gapSize: 0.25, // Gap between dashes
     transparent: false, // Make it transparent
@@ -131,48 +131,62 @@ function createGeodesicLineWithLabel(path_pts, scene, camera) {
   // Create the line geometry
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   const line = new THREE.Line(geometry, material);
-  //// Apply the world matrix transformation to the entire line (convert to world coordinates)
-  //line.applyMatrix4(scene.matrixWorld);  
 
-  // Add the line to the scene
-  scene.add(line);
+  line.scale.set(20,20,20)
 
-  /*
   // Calculate the total path length
-  let totalPathLength = 0;
+  const totalPathLength = calculatePathLength(path_pts);
 
-  for (let i = 1; i < path_pts.length; i++) {
-    totalPathLength += path_pts[i].distanceTo(path_pts[i - 1]);
-  }
+  // Create the label sprite with the total path length
 
-  // Create a text sprite with the total path length
-  const label = createLabel(`Total Length: ${totalPathLength.toFixed(2)} inches`);
+  const scale_factor = 10 / 9 * 20; // ?
+  // `${(fake_scale * distance).toFixed(2)} inches`;
+  const label = createLabel(`${(totalPathLength * scale_factor).toFixed(2)} inches`);
+  // Position the label at the center of the path (you may need to adjust this)
+  const middleVertexIndex = Math.floor(path_pts.length / 2);
+  const middleVertex = new THREE.Vector3(
+    path_pts[middleVertexIndex][0],
+    path_pts[middleVertexIndex][1],
+    path_pts[middleVertexIndex][2]
+  );
 
-  // Position the label at the center of the line
-  const midpointIndex = Math.floor(path_pts.length / 2);
-  const midpoint = path_pts[midpointIndex];
-  label.position.copy(midpoint);
- 
-  // Add the label to the scene
+  label.scale.set(20,20,20)
+  label.position.set(
+    middleVertex.x * 20,
+    middleVertex.y * 20,
+    middleVertex.z * 20,
+  );
+
+  scene.add(line);
   scene.add(label);
-  */
- 
-  // Mark both the line and label for an update
-  line.needsUpdate = true;
-  //label.needsUpdate = true;
 
-
+  // Function to calculate the total path length
+  function calculatePathLength(pts) {
+    let totalLength = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const p1 = new THREE.Vector3(pts[i - 1][0], pts[i - 1][1], pts[i - 1][2]);
+      const p2 = new THREE.Vector3(pts[i][0], pts[i][1], pts[i][2]);
+      totalLength += p1.distanceTo(p2);
+    }
+    return totalLength;
+  }
   // Function to create a text sprite
   function createLabel(text) {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    context.font = '12px Arial';
+    context.font = '10px Arial';
     context.fillStyle = 'white';
     context.textAlign = 'center';
     context.fillText(text, canvas.width / 2, canvas.height / 2);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.SpriteMaterial({ map: texture });
+    const material = new THREE.SpriteMaterial(
+      { 
+        map: texture, 
+        depthWrite: false,
+        depthTest: false
+      }
+    );
     const sprite = new THREE.Sprite(material);
 
     sprite.scale.set(1, 0.5, 1);
@@ -195,75 +209,15 @@ function handle_geodesic(line, scene) {
 
 export function geodesic_service(THREE, loadedObject, event, handleClicks, markers, line, camera, scene) {
   function getClosestVertexIndex(intersection, object) {
-    /*
-    let closestVertexIndex = -1;
-    const fixed_n = 8;
-    const faceIndex = intersection.faceIndex;
-    const geometry = object.geometry;
-    const vertices = geometry.attributes.position.array;
-  
-    // we can get real close, in local mesh tersm, with 
-    // intersection.object.worldToLocal(intersection.point)
-    //
-    // but this does not alias or index to the point
-
-    const iA = faceIndex * 3;
-    const iB = iA + 1 * 3;
-    const iC = iA + 2 * 3;// because the vertices array is contigious groups of 3, X, Y, and Z
-  
-    const vertexA = new THREE.Vector3(vertices[iA], vertices[iA + 1], vertices[iA + 2]);
-    const vertexB = new THREE.Vector3(vertices[iB], vertices[iB + 1], vertices[iB + 2]);
-    const vertexC = new THREE.Vector3(vertices[iC], vertices[iC + 1], vertices[iC + 2]);
-  
-    console.log(
-      `\nfrom face ${faceIndex}, we have vertexA ${vertexA.x}, ${vertexA.y}, ${vertexA.z}`,
-      `\nfrom face ${faceIndex}, we have vertexB ${vertexB.x}, ${vertexB.y}, ${vertexB.z}`,
-      `\nfrom face ${faceIndex}, we have vertexC ${vertexC.x}, ${vertexC.y}, ${vertexC.z}`
-    )
-
-    // object.worldToLocal(new THREE.Vector3(vertices[iA], vertices[iA + 1], vertices[iA + 2]);)
-
-    // Calculate the world positions of the vertices
-    object.localToWorld(vertexA);
-    object.localToWorld(vertexB);
-    object.localToWorld(vertexC);
-  
-    const position = intersection.point;
-  
-    // Calculate distances to the vertices
-    const distanceA = position.distanceTo(vertexA);
-    const distanceB = position.distanceTo(vertexB);
-    const distanceC = position.distanceTo(vertexC);
-  
-    // Find the closest vertex
-    let closestVertex = new THREE.Vector3(vertices[iA], vertices[iA + 1], vertices[iA + 2]); // A
-    if (distanceA < distanceB && distanceA < distanceC) {
-      closestVertexIndex = iA / 3;
-    } else if (distanceB < distanceA && distanceB < distanceC) {
-      closestVertexIndex = iB / 3;
-      closestVertex = new THREE.Vector3(vertices[iB], vertices[iB + 1], vertices[iB + 2]);
-    } else {
-      closestVertexIndex = iC / 3;
-      closestVertex = new THREE.Vector3(vertices[iC], vertices[iC + 1], vertices[iC + 2]);
-    }
-    */
     const face = intersection.face;
+
+    if (!face) {return;}
+
     const geometry = intersection.object.geometry;
     const position = geometry.attributes.position;    
     const fixed_n = 8;
     let closestVertexIndex = -1;
     
-    /*
-    const vertexAIndex = mesh.geometry.index.array[face.a];
-    const vertexBIndex = mesh.geometry.index.array[face.b];
-    const vertexCIndex = mesh.geometry.index.array[face.c];
-    
-    // Get the local vertex coordinates
-    const vertexA = mesh.geometry.attributes.position.array.slice(vertexAIndex * 3, vertexAIndex * 3 + 3);
-    const vertexB = mesh.geometry.attributes.position.array.slice(vertexBIndex * 3, vertexBIndex * 3 + 3);
-    const vertexC = mesh.geometry.attributes.position.array.slice(vertexCIndex * 3, vertexCIndex * 3 + 3);
-    */
-
     const vertexA = new THREE.Vector3();
     const vertexB = new THREE.Vector3();
     const vertexC = new THREE.Vector3();
@@ -301,10 +255,12 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
     let positionKey = `${closestVertex.x.toFixed(fixed_n)},${closestVertex.y.toFixed(fixed_n)},${closestVertex.z.toFixed(fixed_n)}`
     if(positionToIndex.has(positionKey)){
       closestVertexIndex = positionToIndex.get(positionKey)
+      /*
       console.log(
         `... found ${closestVertexIndex} as the closest vertext`,
         `\t it has this position ${positionKey}`
         )
+      */
     }
     else{
       closestVertexIndex = -1;
@@ -322,15 +278,7 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
   
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(vector, camera);
-
-    // Normalize the ray's direction by considering the scale factor
-    const mesh = scene.children
-    // //const scale = object.scale; shuold be pulled from scale.set etc
-    // const scale = 1;
-    // const invScale = new THREE.Vector3(1 / scale.x, 1 / scale.y, 1 / scale.z);
-    // raycaster.ray.direction.copy(vector).applyMatrix4(camera.matrixWorld).sub(camera.position).normalize();
-    // raycaster.ray.direction.multiply(invScale);    
-  
+    const mesh = scene.children  
     const intersects = raycaster.intersectObjects(mesh);
     return intersects;
   }
@@ -340,7 +288,7 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
       line.geometry.attributes.position.setXYZ(1, vectorB.x, vectorB.y, vectorB.z);
       line.geometry.attributes.position.needsUpdate = true;
   }
-    
+
   const { points, clicks } = handleClicks;
   const intersects = getIntersections(event, camera, scene);
 
@@ -354,7 +302,7 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
     if (handleClicks.clicks > 1) {
       const fake_scale = 10 / 9;
       const distance = points[0].distanceTo(points[1]);
-      distancePlace.innerText = `${(fake_scale * distance).toFixed(2)} inches`;
+      //distancePlace.innerText = `${(fake_scale * distance).toFixed(2)} inches`;
 
       setLine(points[0], points[1], line);
       handleClicks.clicks = 0;
@@ -370,11 +318,16 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
     updateVertexInfo(index_at)
     if (!hasInvalidVertex()){
       handle_geodesic(line, scene)
+      /*
       console.log(
         `start: ${vertexInfo.vertexId1}, end: ${vertexInfo.vertexId2}`
       )
+      */
     }
     // note loadedObject is the same as intersects[...].object
+  }
+  else{
+    updateVertexInfo(-1)// if we have no hit we start over
   }
 }
 

@@ -40,7 +40,6 @@ export async function createVertexOffsetMapFromURL(objFileURL) {
       }
     }
   
-    console.log('Vertex Offset Map Created:');
     return vertexOffsetMap
   }
   
