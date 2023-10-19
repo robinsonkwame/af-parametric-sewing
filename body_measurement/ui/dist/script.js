@@ -3,10 +3,14 @@
   note: would set up BVH for painting, etc https://github.com/gkjohnson/three-mesh-bvh
 */
 import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
+//import * as BufferGeometryUtils from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/utils/BufferGeometryUtils";
 import { OrbitControls } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls";
 import { OBJLoader } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/OBJLoader";
 
-import { initialize_geodesic_service, geodesic_service, obj_path, obj_file} from './geodesic.js' 
+import { 
+  initialize_geodesic_service, geodesic_service, 
+  obj_path, obj_file, initalizeVertexLookupTable,
+} from './geodesic.js' 
 
 let loadedObject;
 
@@ -65,7 +69,7 @@ function adjustCameraToCenter(camera, object) {
   camera.lookAt(center);
 }
 
-function loadObject(scene, camera) {
+function loadObject(scene, camera, positionToIndex) {
   var objLoader = new OBJLoader();
   objLoader.setPath(
     obj_path
@@ -83,8 +87,7 @@ function loadObject(scene, camera) {
       }
     });
     object.scale.set(20, 20, 20);
-
-    loadedObject = object; // Set the loaded object as a global variable
+    loadedObject = object; // for ray trace intersection with face -> vertex -> .obj vertex
 
     scene.add(object);
     adjustCameraToCenter(camera, object);
@@ -150,6 +153,7 @@ function main() {
   loadObject(scene, camera);
 
   initialize_geodesic_service(obj_path, obj_file); // should point to same obj as loadObject
+  initalizeVertexLookupTable(obj_path, obj_file)
 
   setupMouseDown(scene, camera);
 
