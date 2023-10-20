@@ -131,6 +131,7 @@ function createGeodesicLineWithLabel(path_pts, scene, camera) {
   // Create the line geometry
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   const line = new THREE.Line(geometry, material);
+  //line.computeLineDistances();
 
   line.scale.set(20,20,20)
 
