@@ -10,12 +10,13 @@ import { OBJLoader } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/lo
 import { 
   initialize_geodesic_service, geodesic_service, 
   obj_path, obj_file, initalizeVertexLookupTable,
+  geodesic_service2
 } from './geodesic.js' 
 
 let loadedObject;
 let camera;
 let scene;
-let markers = []; // Array to store markers
+let markers = []; // to store red dots that you can click on body
 let previousClick = null;
 let meshIndex = -1
 
@@ -115,7 +116,6 @@ function handleClicks() {
 
 function createMarkers(scene) {
   const markerA = new THREE.Mesh(
-    //new THREE.SphereGeometry(0.1, 10, 20),
     new THREE.SphereGeometry(0.1, 2, 5),
     new THREE.MeshBasicMaterial({ color: 0xff5555 })
   );
@@ -147,8 +147,8 @@ function createLine(scene) {
 function setupMouseDown(scene, camera) {
   const handleClicksData = handleClicks();
 
-  const markers = createMarkers(scene);
-  const line = createLine(scene);
+  //const markers = createMarkers(scene);
+  //const line = createLine(scene);
 
   //const onMouseDownHandler = (event) =>
   //  geodesic_service(THREE, loadedObject, event, handleClicksData, markers, line, camera, scene)
@@ -156,7 +156,7 @@ function setupMouseDown(scene, camera) {
 }
 
 function createRedSphere(point, scene){
-  const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.7 });
+  const material = new THREE.MeshBasicMaterial({ color: 0xFCD12A, transparent: true, opacity: 0.7 });
   material.raycast = false;
   const geometry = new THREE.SphereGeometry(0.1, 32, 32);
   const marker = new THREE.Mesh(geometry, material);
@@ -166,27 +166,10 @@ function createRedSphere(point, scene){
   return marker;
 }
 
-function markIntersection(scene, intersectionPoint, mesh) {
-  if (markers.length >= 2) {
-    // Remove the oldest marker when the buffer is full
-    const removedMarker = markers.shift();
-    scene.remove(removedMarker.sphere);
-  }
-
+function markIntersection(scene, intersection, intersectionPoint, mesh) {
   const marker = createRedSphere(intersectionPoint, scene)
 
-  markers.push({ point: intersectionPoint, sphere: marker });
-
-  if (markers.length === 2) {
-    // Call the geodesic_service function when there are two markers
-    call_geodesic_service(markers[0].point, markers[1].point);
-
-    // Clear the markers buffer
-    markers.forEach((marker) => {
-      scene.remove(marker.sphere);
-    });
-    markers = [];
-  }
+  markers.push({ intersection: intersection, point: intersectionPoint, sphere: marker });
 }
 
 function clearMarkers(scene) {
@@ -206,7 +189,9 @@ function getIntersections(event, camera, scene) {
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(vector, camera);
   if(scene){
-    const intersects = raycaster.intersectObjects(scene.children[meshIndex].children);
+    const intersects = raycaster.intersectObjects(
+      scene.children[meshIndex].children
+    );
 
     return intersects;
   }
@@ -217,17 +202,58 @@ function getIntersections(event, camera, scene) {
 window.addEventListener('click', (event) => {
   // Check for intersections
   const intersections = getIntersections(event, camera, scene);
-  if (intersections.length > 0) {
-    markIntersection(scene, intersections[0].point, intersections[0].object);
-  } else {
-    clearMarkers(scene);
+
+  // Hit Mesh | Sphere Exists | Action
+  // ---------------------------------
+  //    0     |       0       | None     
+  //    0     |       1       | None      
+  //    1     |       0       | Add      
+  //    1     |       1       | Add, Call Geodesic
+  //    1     |       2       | Wipe, Add
+
+  const hitMesh = intersections.length > 0;
+  const oneSphereExists = markers.length === 1;
+  const twoSpheresExist = markers.length === 2;
+
+  if (hitMesh && !oneSphereExists){
+    // Add
+    markIntersection(scene, intersections, intersections[0].point, intersections[0].object);
+    console.log("case 3, hit mesh, no sphere")
   }
+  if (hitMesh && oneSphereExists){
+    console.log("case 4, hit mesh, one sphere exists")
+    // Add
+    markIntersection(scene, intersections, intersections[0].point, intersections[0].object);
+
+    // Call Geodesic service
+    if (markers.length === 2) {      
+      call_geodesic_service(markers[0].point, markers[1].point);
+    }
+  }
+  if (hitMesh && twoSpheresExist){
+    console.log("case 5, hit mesh,  two spheres exist")
+
+    // Wipe
+    markers.forEach((marker) => {
+      scene.remove(marker.sphere);
+    });
+    markers = [];
+
+    // Add
+    markIntersection(scene, intersections[0].point, intersections[0].object);
+  }
+
+
+  // if (intersections.length > 0) {
+  //   markIntersection(scene, intersections[0].point, intersections[0].object);
+  // } else {
+  //   //clearMarkers(scene);
+  // }
 });
 
-// Function to call the geodesic service
 function call_geodesic_service(point1, point2) {
-  // Your geodesic service logic here
   console.log("would call geodesic stuff here")
+  //geodesic_service2(markers, scene)  
 }
 
 
