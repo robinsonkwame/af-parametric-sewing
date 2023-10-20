@@ -174,8 +174,8 @@ function markIntersection(scene, intersection, intersectionPoint, mesh) {
 
 function clearMarkers(scene) {
   // Clear all markers from the scene and the buffer
-  markers.forEach((marker) => {
-    scene.remove(marker.sphere);
+  markers.forEach((markers) => {
+    scene.remove(markers.sphere);
   });
   markers = [];
 }
@@ -203,57 +203,45 @@ window.addEventListener('click', (event) => {
   // Check for intersections
   const intersections = getIntersections(event, camera, scene);
 
-  // Hit Mesh | Sphere Exists | Action
-  // ---------------------------------
-  //    0     |       0       | None     
-  //    0     |       1       | None      
-  //    1     |       0       | Add      
-  //    1     |       1       | Add, Call Geodesic
-  //    1     |       2       | Wipe, Add
+  //  CASE  \ Hit Mesh | Sphere Exists | Action
+  // ----------------------------------------
+  //    1      0     |       0       | None     
+  //    2      0     |       1       | None      
+  //    3      1     |       0       | Add      
+  //    4      1     |       1       | Add, Call Geodesic
+  //    5      1     |       2       | Wipe, Add
 
   const hitMesh = intersections.length > 0;
-  const oneSphereExists = markers.length === 1;
-  const twoSpheresExist = markers.length === 2;
+  const oneSphereExists = markers.length == 1;
+  const twoSpheresExist = markers.length == 2;
 
-  if (hitMesh && !oneSphereExists){
+  // Case 3
+  if (hitMesh && !oneSphereExists && !twoSpheresExist){
     // Add
-    markIntersection(scene, intersections, intersections[0].point, intersections[0].object);
-    console.log("case 3, hit mesh, no sphere")
+    markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
   }
+  // Case 4
   if (hitMesh && oneSphereExists){
-    console.log("case 4, hit mesh, one sphere exists")
     // Add
-    markIntersection(scene, intersections, intersections[0].point, intersections[0].object);
+    markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
 
     // Call Geodesic service
     if (markers.length === 2) {      
-      call_geodesic_service(markers[0].point, markers[1].point);
+      call_geodesic_service();
     }
   }
-  if (hitMesh && twoSpheresExist){
-    console.log("case 5, hit mesh,  two spheres exist")
-
+  // Case 5
+  if (hitMesh && twoSpheresExist && !oneSphereExists){
     // Wipe
-    markers.forEach((marker) => {
-      scene.remove(marker.sphere);
-    });
-    markers = [];
-
+    clearMarkers(scene)
     // Add
-    markIntersection(scene, intersections[0].point, intersections[0].object);
+    markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
   }
-
-
-  // if (intersections.length > 0) {
-  //   markIntersection(scene, intersections[0].point, intersections[0].object);
-  // } else {
-  //   //clearMarkers(scene);
-  // }
 });
 
-function call_geodesic_service(point1, point2) {
-  console.log("would call geodesic stuff here")
-  //geodesic_service2(markers, scene)  
+function call_geodesic_service() {
+  //console.log("would call geodesic stuff here")
+  geodesic_service2(markers, scene)  
 }
 
 
