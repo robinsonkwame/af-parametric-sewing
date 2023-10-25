@@ -10,7 +10,7 @@ import { OBJLoader } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/lo
 import { 
   initialize_geodesic_service, geodesic_service, 
   obj_path, obj_file, initalizeVertexLookupTable,
-  geodesic_service2
+  geodesic_service2, circumference_service
 } from './geodesic.js' 
 
 let loadedObject;
@@ -19,6 +19,7 @@ let scene;
 let markers = []; // to store red dots that you can click on body
 let previousClick = null;
 let meshIndex = -1
+let isCircumferenceMode = false; 
 
 // Set up a canvas with higher pixel density
 function setupCanvas() {
@@ -144,6 +145,28 @@ function createLine(scene) {
   return line;
 }
 
+function setUpToggle(){
+  // Add toggle button 
+  const toggleButton = document.createElement('button');
+  toggleButton.textContent = 'Point-to-Point'; 
+
+  // Toggle state
+  let isCircumferenceMode = false; 
+
+  // Click handler
+  toggleButton.addEventListener('click', () => {
+    isCircumferenceMode = !isCircumferenceMode;
+    if (isCircumferenceMode) {
+      toggleButton.textContent = 'Circumference';
+    } else {
+      toggleButton.textContent = 'Point-to-Point';
+    }
+  });
+
+  // Append button 
+  document.body.appendChild(toggleButton);  
+}
+
 function setupMouseDown(scene, camera) {
   const handleClicksData = handleClicks();
 
@@ -215,35 +238,49 @@ window.addEventListener('click', (event) => {
   const oneSphereExists = markers.length == 1;
   const twoSpheresExist = markers.length == 2;
 
-  // Case 3
-  if (hitMesh && !oneSphereExists && !twoSpheresExist){
-    // Add
-    markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
-  }
-  // Case 4
-  if (hitMesh && oneSphereExists){
-    // Add
-    markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
+  if (isCircumferenceMode) {
+    if (markers.length > 0){
+      call_circumference_service()
+    }
 
-    // Call Geodesic service
-    if (markers.length === 2) {      
-      call_geodesic_service();
+  } else { // Point to Point mode
+
+    // Case 3
+    if (hitMesh && !oneSphereExists && !twoSpheresExist){
+      // Add
+      markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
+    }
+    // Case 4
+    if (hitMesh && oneSphereExists){
+      // Add
+      markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
+
+      // Call Geodesic service
+      if (markers.length === 2) {      
+        call_geodesic_service();
+      }
+    }
+    // Case 5
+    if (hitMesh && twoSpheresExist && !oneSphereExists){
+      // Wipe
+      clearMarkers(scene)
+      // Add
+      markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
     }
   }
-  // Case 5
-  if (hitMesh && twoSpheresExist && !oneSphereExists){
-    // Wipe
-    clearMarkers(scene)
-    // Add
-    markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
-  }
+
 });
+
+function call_circumference_service() {
+  //console.log("would call geodesic stuff here")
+  circumference_service(markers, scene)  
+}
+
 
 function call_geodesic_service() {
   //console.log("would call geodesic stuff here")
   geodesic_service2(markers, scene)  
 }
-
 
 function main() {
   const { pixelRatio, canvas } = setupCanvas();
@@ -262,6 +299,7 @@ function main() {
   //adjustCameraToCenter(camera); 
 
   setupMouseDown(scene, camera);
+  setUpToggle();
 
   function animate() {
     requestAnimationFrame(animate);

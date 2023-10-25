@@ -131,7 +131,7 @@ function createGeodesicLineWithLabel(path_pts, scene, camera) {
   // Create the line geometry
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   const line = new THREE.Line(geometry, material);
-  //line.computeLineDistances();
+  //line.computeLineDistances(); // something's off about the material; w this the lines look less accurate
 
   line.scale.set(20,20,20)
 
@@ -143,7 +143,7 @@ function createGeodesicLineWithLabel(path_pts, scene, camera) {
   const scale_factor = 10 / 9 * 20; // ?
   // `${(fake_scale * distance).toFixed(2)} inches`;
   const label = createLabel(`${(totalPathLength * scale_factor).toFixed(2)} inches`);
-  // Position the label at the center of the path (you may need to adjust this)
+  
   const middleVertexIndex = Math.floor(path_pts.length / 2);
   const middleVertex = new THREE.Vector3(
     path_pts[middleVertexIndex][0],
@@ -207,7 +207,9 @@ function handle_geodesic(line, scene) {
       console.error(error);
     });
 }
-
+export function circumference_service(markers, scene){
+  // ...
+}
 export function geodesic_service2(markers, scene){
   function getClosestVertexIndex(intersection, object) {
     const face = intersection.face;
