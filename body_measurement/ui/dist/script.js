@@ -145,18 +145,55 @@ function createLine(scene) {
   return line;
 }
 
+const clickModeDiv = document.getElementById('clickMode');
+
+// Function to add the "make circumference" text link
+function addCircumferenceText() {
+    // Create a link element
+    const linkElement = document.createElement('a');
+    linkElement.href = "javascript:void(0)";
+    linkElement.textContent = "Make Circumference";
+    linkElement.addEventListener('click', call_circumference_service);
+
+    // Style the link
+    linkElement.style.color = "white"; // Set text color
+    linkElement.style.backgroundColor = "blue"; // Set background color
+    linkElement.style.padding = "5px 10px"; // Add padding for better readability
+
+    // Create a paragraph element and append the styled link to it
+    const paragraphElement = document.createElement('p');
+    paragraphElement.appendChild(linkElement);
+
+    // Append the paragraph to the clickModeDiv
+    clickModeDiv.appendChild(paragraphElement);
+}
+
+// Function to remove the "make circumference" text link
+function removeCircumferenceText() {
+    const paragraphElement = clickModeDiv.querySelector('p');
+    if (paragraphElement) {
+        clickModeDiv.removeChild(paragraphElement);
+    }
+}
+
 function setUpToggle(){
   const clickModeDiv = document.getElementById('clickMode');
   clickModeDiv.textContent = 'Point-to-Point';
+  isCircumferenceMode = false;
 
   clickModeDiv.addEventListener('click', (event) => {
     event.stopPropagation(); // Prevent click propagation
 
     isCircumferenceMode = !isCircumferenceMode;
+    clearMarkers(scene)
+
     if (isCircumferenceMode) {
       clickModeDiv.textContent = 'Circumference';
+      addCircumferenceText()
+
     } else {
       clickModeDiv.textContent = 'Point-to-Point';
+      removeCircumferenceText()
     }
   });
 
@@ -168,13 +205,6 @@ function setUpToggle(){
 
 function setupMouseDown(scene, camera) {
   const handleClicksData = handleClicks();
-
-  //const markers = createMarkers(scene);
-  //const line = createLine(scene);
-
-  //const onMouseDownHandler = (event) =>
-  //  geodesic_service(THREE, loadedObject, event, handleClicksData, markers, line, camera, scene)
-  //document.addEventListener("mousedown", onMouseDownHandler, false);
 }
 
 function createRedSphere(point, scene){
@@ -225,12 +255,22 @@ window.addEventListener('click', (event) => {
   // Check for intersections
   const intersections = getIntersections(event, camera, scene);
 
+  // For circumference measurement, Condition A
+  //
+  //  CASE  \ Hit Mesh        | Action
+  // ------------------------------------------------
+  //    1        0            |   None     
+  //    2        1            |   Add     
+  //    3   0, make button    |   Call Geodesic, Wipe (Note: handled in click call back)
+
+  // For point to point measurement, Condition B
+  //
   //  CASE  \ Hit Mesh | Sphere Exists | Action
   // ----------------------------------------
   //    1      0     |       0       | None     
   //    2      0     |       1       | None      
   //    3      1     |       0       | Add      
-  //    4      1     |       1       | Add, Call Geodesic
+  //    4      1     |       1       | Add, Call Geodesic, Wipe // note: spheres intersect at mouse raypoint, not mesh vertex, so things can look off
   //    5      1     |       2       | Wipe, Add
 
   const hitMesh = intersections.length > 0;
@@ -238,10 +278,10 @@ window.addEventListener('click', (event) => {
   const twoSpheresExist = markers.length == 2;
 
   if (isCircumferenceMode) {
-    if (markers.length > 0){
-      call_circumference_service()
-    }
 
+    if (hitMesh){
+      markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
+    }
   } else { // Point to Point mode
 
     // Case 3
@@ -258,6 +298,8 @@ window.addEventListener('click', (event) => {
       if (markers.length === 2) {      
         call_geodesic_service();
       }
+
+      clearMarkers(scene)
     }
     // Case 5
     if (hitMesh && twoSpheresExist && !oneSphereExists){
@@ -271,10 +313,9 @@ window.addEventListener('click', (event) => {
 });
 
 function call_circumference_service() {
-  //console.log("would call geodesic stuff here")
-  circumference_service(markers, scene)  
+  circumference_service(markers, scene)
+  clearMarkers(scene)
 }
-
 
 function call_geodesic_service() {
   //console.log("would call geodesic stuff here")

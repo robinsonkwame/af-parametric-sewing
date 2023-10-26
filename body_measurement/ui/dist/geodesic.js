@@ -2,6 +2,7 @@ import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
 
 const uploadUrl = "http://192.168.0.101:8000/upload"; // "http://localhost:8000/upload"
 const solveUrl = "http://192.168.0.101:8000/solve"; // "http://localhost:8000/solve";
+const circfUrl = "http://192.168.0.101:8000/loop"; // "http://localhost:8000/circfUrl";
 export const obj_path = "https://raw.githubusercontent.com/robinsonkwame/static/main/"
 export const obj_file = "female_output.obj"
 import { processGeometry, createVertexOffsetMapFromURL } from "./vertex_soup.js"
@@ -84,6 +85,29 @@ export function initialize_geodesic_service(obj_path, obj_file) {
       console.error(error);
     });
     
+}
+
+export function circumf_geodesic_service(v_list) {
+  const requestUrl = `${circfUrl}?v_list=${v_list}`;
+
+  const requestOptions = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  return fetch(requestUrl, requestOptions)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to find a path from v_list=${v_list}`);
+      }
+      return response.json();
+    })
+    .catch(error => {
+      console.error(error);
+      return null; // Return null or another default value to indicate an error.
+    });
 }
 
 export function solve_geodesic_service(v_start, v_end) {
@@ -207,66 +231,131 @@ function handle_geodesic(line, scene) {
       console.error(error);
     });
 }
-export function circumference_service(markers, scene){
-  // ...
+
+function getClosestVertexIndex(intersection, object) {
+  const face = intersection.face;
+
+  if (!face) {return;}
+
+  const geometry = intersection.object.geometry;
+  const position = geometry.attributes.position;    
+  const fixed_n = 8;
+  let closestVertexIndex = -1;
+  
+  const vertexA = new THREE.Vector3();
+  const vertexB = new THREE.Vector3();
+  const vertexC = new THREE.Vector3();
+
+  vertexA.fromBufferAttribute(position, face.a)
+  vertexB.fromBufferAttribute(position, face.b)
+  vertexC.fromBufferAttribute(position, face.c)    
+
+  // Convert the intersection point to local space
+  const localIntersectionPoint = intersection.object.worldToLocal(intersection.point);
+  
+  const distanceA = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexA));
+  const distanceB = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexB));
+  const distanceC = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexC));
+  
+  // Find the closest vertex
+  let closestVertex;
+  let minDistance = Number.MAX_VALUE;
+  
+  if (distanceA < minDistance) {
+    minDistance = distanceA;
+    closestVertex = vertexA;
+  }
+  if (distanceB < minDistance) {
+    minDistance = distanceB;
+    closestVertex = vertexB;
+  }
+  if (distanceC < minDistance) {
+    closestVertex = vertexC;
+  }
+  
+  // 'closestVertex' now contains the local coordinates of the closest vertex to the intersection point.
+
+  // translate the three js vertex position to the obj vertex index
+  let positionKey = `${closestVertex.x.toFixed(fixed_n)},${closestVertex.y.toFixed(fixed_n)},${closestVertex.z.toFixed(fixed_n)}`
+  if(positionToIndex.has(positionKey)){
+    closestVertexIndex = positionToIndex.get(positionKey)
+  }
+  else{
+    closestVertexIndex = -1;
+    throw new Error("WHOA! didn't find position for ", positionKey)
+  }
+
+  return closestVertexIndex;
+}  
+
+function createIntersectionCurve(mesh, markers) {
+
+  // Create a Plane geometry
+  const planeGeom = new THREE.PlaneGeometry();
+  
+  // Calculate the normal of the plane based on the 3 points
+  const v1 = new THREE.Vector3().subVectors(markers[1], markers[0]);
+  const v2 = new THREE.Vector3().subVectors(markers[2], markers[0]);
+  const normal = new THREE.Vector3().crossVectors(v1, v2);
+  planeGeom.lookAt(normal);
+
+  // Create the plane mesh
+  const plane = new THREE.Mesh(planeGeom, new THREE.MeshBasicMaterial({color: 0xffff00}));
+
+  // Calculate the intersection curve
+  const intersection = new THREE.Curve(); 
+  intersection.getPoints = function(numPoints) {
+    const points = [];
+    for (let i = 0; i < numPoints; i++) {
+      points.push(mesh.geometry.vertices[marker.intersection[i]]); 
+    }
+    return points;
+  };
+
+  // Create the line for the intersection curve
+  const geometry = new THREE.BufferGeometry().setFromPoints( intersection.getPoints(marker.intersection.length) );
+  const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const line = new THREE.Line(geometry, material);
+
+  scene.add(line);
+  // Remove plane from scene
+  scene.remove(plane);
+
+  plane.geometry.dispose();
+  plane.material.dispose();
 }
+
+
+export function circumference_service(markers, scene){
+  /*
+    TODO: 
+      ? in script.js, make points past 3 replace earlier points
+      * replace circumf_geodesic with a local call that calls createIntersectionCurve above
+  */
+  const v_list = markers.map(marker => getClosestVertexIndex(marker.intersection));
+
+  if(v_list.length >= 4){
+    circumf_geodesic_service(v_list)
+    .then(data => {
+      if (data) {
+        createGeodesicLineWithLabel(
+          data['path_pts'],
+          scene
+        )
+      }
+    })
+    .catch(error => {
+      console.error(error);
+    }); 
+  }
+  else{
+    console.log("Need at least 4 points to make a stable, nontrival circumference!")
+  }
+
+
+}
+
 export function geodesic_service2(markers, scene){
-  function getClosestVertexIndex(intersection, object) {
-    const face = intersection.face;
-
-    if (!face) {return;}
-
-    const geometry = intersection.object.geometry;
-    const position = geometry.attributes.position;    
-    const fixed_n = 8;
-    let closestVertexIndex = -1;
-    
-    const vertexA = new THREE.Vector3();
-    const vertexB = new THREE.Vector3();
-    const vertexC = new THREE.Vector3();
-
-    vertexA.fromBufferAttribute(position, face.a)
-    vertexB.fromBufferAttribute(position, face.b)
-    vertexC.fromBufferAttribute(position, face.c)    
-
-    // Convert the intersection point to local space
-    const localIntersectionPoint = intersection.object.worldToLocal(intersection.point);
-    
-    const distanceA = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexA));
-    const distanceB = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexB));
-    const distanceC = localIntersectionPoint.distanceTo(new THREE.Vector3(...vertexC));
-    
-    // Find the closest vertex
-    let closestVertex;
-    let minDistance = Number.MAX_VALUE;
-    
-    if (distanceA < minDistance) {
-      minDistance = distanceA;
-      closestVertex = vertexA;
-    }
-    if (distanceB < minDistance) {
-      minDistance = distanceB;
-      closestVertex = vertexB;
-    }
-    if (distanceC < minDistance) {
-      closestVertex = vertexC;
-    }
-    
-    // 'closestVertex' now contains the local coordinates of the closest vertex to the intersection point.
-
-    // translate the three js vertex position to the obj vertex index
-    let positionKey = `${closestVertex.x.toFixed(fixed_n)},${closestVertex.y.toFixed(fixed_n)},${closestVertex.z.toFixed(fixed_n)}`
-    if(positionToIndex.has(positionKey)){
-      closestVertexIndex = positionToIndex.get(positionKey)
-    }
-    else{
-      closestVertexIndex = -1;
-      throw new Error("WHOA! didn't find position for ", positionKey)
-    }
-
-    return closestVertexIndex;
-  }  
-
   const v_start = getClosestVertexIndex(markers[0].intersection)
   const v_end = getClosestVertexIndex(markers[1].intersection)
 
@@ -283,7 +372,7 @@ export function geodesic_service2(markers, scene){
       console.error(error);
     }); 
 }
-
+/*
 export function geodesic_service(THREE, loadedObject, event, handleClicks, markers, line, camera, scene) {
   function getClosestVertexIndex(intersection, object) {
     const face = intersection.face;
@@ -407,6 +496,7 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
     updateVertexInfo(-1)// if we have no hit we start over
   }
 }
+*/
 
 export function geodesic_local(THREE, event, handleClicks, markers, line, camera, scene){
     // Assumes WASM version of Potpourri3d loaded and usable

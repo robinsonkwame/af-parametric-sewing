@@ -1,6 +1,7 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
 from fastapi import FastAPI, UploadFile, File
+from typing import List
 import requests
 import logging
 from starlette.requests import Request
@@ -82,15 +83,28 @@ async def solve_path(v_start: int, v_end: int):
         logging.error(f"An error occurred while solving the path: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while solving the path.")
 
-# @app.get("/solve")
-# async def solve_path(v_start: int, v_end: int):
-#     global path_solver
-#     if path_solver is None:
-#         return {"message": "You must upload a mesh first."}
+@app.get("/loop")
+async def solve_loop_path(v_list: str):
+    global path_solver
+    if path_solver is None:
+        raise HTTPException(status_code=404, detail="You must upload a mesh first.")
 
-#     # Solve the path
-#     path_pts = path_solver.find_geodesic_path(v_start=v_start, v_end=v_end)
+    try:
+        v_list_int = [int(x) for x in v_list.split(',')]
 
-#     # Convert path_pts (a numpy array) to a list so that it can be returned as JSON
-#     path_pts_list = path_pts.tolist()
-#     return {"path_pts": path_pts_list}
+        v_list_int.append(
+            v_list_int[1] # to force a loop back to the start 
+        ) 
+
+        # Solve the path
+        logging.info(f"Starting the loop solver ... ")
+        path_pts = path_solver.find_geodesic_path_poly(v_list=v_list_int) # find_geodesic_loop(v_list=v_list_int)
+        logging.info(f"Finished the loop solver ... ")
+
+        # Convert path_pts (a numpy array) to a list so that it can be returned as JSON
+        path_pts_list = path_pts.tolist()
+        return {"path_pts": path_pts_list}
+    except Exception as e:
+        # Log the exception for diagnostic purposes
+        logging.error(f"An error occurred while solving the path: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while solving the path.")
