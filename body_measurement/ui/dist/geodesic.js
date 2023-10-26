@@ -1,7 +1,7 @@
 import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
 
-const uploadUrl = "http://localhost:8000/upload";//"http://192.168.0.101:8000/upload";
-const solveUrl = "http://localhost:8000/solve";//"http://192.168.0.101:8000/solve";
+const uploadUrl = "http://192.168.0.101:8000/upload"; // "http://localhost:8000/upload"
+const solveUrl = "http://192.168.0.101:8000/solve"; // "http://localhost:8000/solve";
 export const obj_path = "https://raw.githubusercontent.com/robinsonkwame/static/main/"
 export const obj_file = "female_output.obj"
 import { processGeometry, createVertexOffsetMapFromURL } from "./vertex_soup.js"

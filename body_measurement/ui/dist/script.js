@@ -146,25 +146,24 @@ function createLine(scene) {
 }
 
 function setUpToggle(){
-  // Add toggle button 
-  const toggleButton = document.createElement('button');
-  toggleButton.textContent = 'Point-to-Point'; 
+  const clickModeDiv = document.getElementById('clickMode');
+  clickModeDiv.textContent = 'Point-to-Point';
 
-  // Toggle state
-  let isCircumferenceMode = false; 
+  clickModeDiv.addEventListener('click', (event) => {
+    event.stopPropagation(); // Prevent click propagation
 
-  // Click handler
-  toggleButton.addEventListener('click', () => {
     isCircumferenceMode = !isCircumferenceMode;
     if (isCircumferenceMode) {
-      toggleButton.textContent = 'Circumference';
+      clickModeDiv.textContent = 'Circumference';
     } else {
-      toggleButton.textContent = 'Point-to-Point';
+      clickModeDiv.textContent = 'Point-to-Point';
     }
   });
 
-  // Append button 
-  document.body.appendChild(toggleButton);  
+  // Prevent click propagation on the parent element
+  clickModeDiv.parentNode.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
 }
 
 function setupMouseDown(scene, camera) {

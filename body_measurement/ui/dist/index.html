@@ -5,13 +5,34 @@
   <title>CodePen - Distance measurement - SoC refactor</title>
   <link rel="stylesheet" href="./style.css">
 
+  <style>
+    .canvas-container {
+      position: relative;
+      /* Add other styles as needed for your canvas container */
+    }
+
+    .custom-button {
+      position: absolute;
+      right: 4vw;
+      padding: 10px 20px;
+      color: #ffffff;
+      border: 1px solid #b4c1ca;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      text-align: center;
+    }
+
+    .custom-button:hover {
+      background-color: #2980b9;
+    }
+  </style>
+
 </head>
 <body>
 <!-- partial:index.partial.html -->
-<div style="position: relative;">
-  <!--
-  <div style="position: absolute; color: white; left: 50%; transform: translateX(-50%);" id="distancePlace">0 inches</div>
-  -->
+<div class="canvas-container" style="position: relative;">
+  <div class="custom-button" id="clickMode">Point-to-Point</div>
 </div>
 <!-- partial -->
   <script type="module" src="./script.js"></script>
