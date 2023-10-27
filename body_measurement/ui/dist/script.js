@@ -8,7 +8,7 @@ import { OrbitControls } from "https://cdn.skypack.dev/three@0.136.0/examples/js
 import { OBJLoader } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/OBJLoader";
 
 import { 
-  initialize_geodesic_service, geodesic_service, 
+  initialize_geodesic_service, 
   obj_path, obj_file, initalizeVertexLookupTable,
   geodesic_service2, circumference_service
 } from './geodesic.js' 
@@ -257,11 +257,11 @@ window.addEventListener('click', (event) => {
 
   // For circumference measurement, Condition A
   //
-  //  CASE  \ Hit Mesh        | Action
+  //  CASE  \ Hit Mesh | Sphere Exists | Action
   // ------------------------------------------------
-  //    1        0            |   None     
-  //    2        1            |   Add     
-  //    3   0, make button    |   Call Geodesic, Wipe (Note: handled in click call back)
+  //    1      0     |       0,1,2     | Add     
+  //    2      0     |       3         | Wipe, Add     
+  //    3         (make button)        | Call Geodesic, Wipe
 
   // For point to point measurement, Condition B
   //
@@ -276,10 +276,17 @@ window.addEventListener('click', (event) => {
   const hitMesh = intersections.length > 0;
   const oneSphereExists = markers.length == 1;
   const twoSpheresExist = markers.length == 2;
+  const canAddSphere = markers.length < 3
+  const resetSpeheres = markers.length >= 3
 
   if (isCircumferenceMode) {
-
-    if (hitMesh){
+    if (hitMesh && canAddSphere){ // Case 1
+      markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
+    }
+    if (hitMesh && resetSpeheres){ // Case 2
+      // Wipe
+      clearMarkers(scene)
+      // Add
       markIntersection(scene, intersections[0], intersections[0].point, intersections[0].object);
     }
   } else { // Point to Point mode
@@ -313,7 +320,7 @@ window.addEventListener('click', (event) => {
 });
 
 function call_circumference_service() {
-  circumference_service(markers, scene)
+  circumference_service(markers, scene, scene.children[meshIndex].children[0])
   clearMarkers(scene)
 }
 

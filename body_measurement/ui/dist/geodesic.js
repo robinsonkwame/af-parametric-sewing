@@ -87,7 +87,7 @@ export function initialize_geodesic_service(obj_path, obj_file) {
     
 }
 
-export function circumf_geodesic_service(v_list) {
+export function circumf_geodesic_service(v_list) {  
   const requestUrl = `${circfUrl}?v_list=${v_list}`;
 
   const requestOptions = {
@@ -288,71 +288,46 @@ function getClosestVertexIndex(intersection, object) {
   return closestVertexIndex;
 }  
 
-function createIntersectionCurve(mesh, markers) {
+function createIntersectionCurve(markers, mesh) {
+  /// TODO TRY THiS
+  // if it doesn't work then go to brute force solution
+  //     if it's performant enough leave as is for now
 
-  // Create a Plane geometry
-  const planeGeom = new THREE.PlaneGeometry();
+  const planeGeom = new THREE.Plane();  
+  planeGeom.setFromCoplanarPoints(
+    markers[0].point, markers[1].point, markers[2].point
+  )
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.set(planeGeom.position, planeGeom.normal)
   
-  // Calculate the normal of the plane based on the 3 points
-  const v1 = new THREE.Vector3().subVectors(markers[1], markers[0]);
-  const v2 = new THREE.Vector3().subVectors(markers[2], markers[0]);
-  const normal = new THREE.Vector3().crossVectors(v1, v2);
-  planeGeom.lookAt(normal);
-
-  // Create the plane mesh
-  const plane = new THREE.Mesh(planeGeom, new THREE.MeshBasicMaterial({color: 0xffff00}));
-
-  // Calculate the intersection curve
-  const intersection = new THREE.Curve(); 
-  intersection.getPoints = function(numPoints) {
-    const points = [];
-    for (let i = 0; i < numPoints; i++) {
-      points.push(mesh.geometry.vertices[marker.intersection[i]]); 
-    }
-    return points;
-  };
-
-  // Create the line for the intersection curve
-  const geometry = new THREE.BufferGeometry().setFromPoints( intersection.getPoints(marker.intersection.length) );
-  const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-  const line = new THREE.Line(geometry, material);
-
-  scene.add(line);
-  // Remove plane from scene
-  scene.remove(plane);
+  let intersections = raycaster.intersectObject(mesh);
+  if (intersections.length === 0) {
+    // Flip normal
+    raycaster.set(plane.position, planeGeom.normal.negate());
+    intersections = raycaster.intersectObject(mesh);    
+  }
 
   plane.geometry.dispose();
-  plane.material.dispose();
+
+  return intersections;
 }
 
+function circumf_from_plane(markers, mesh){
+  return createIntersectionCurve(markers, mesh)
+}
 
-export function circumference_service(markers, scene){
-  /*
-    TODO: 
-      ? in script.js, make points past 3 replace earlier points
-      * replace circumf_geodesic with a local call that calls createIntersectionCurve above
-  */
-  const v_list = markers.map(marker => getClosestVertexIndex(marker.intersection));
-
-  if(v_list.length >= 4){
-    circumf_geodesic_service(v_list)
-    .then(data => {
-      if (data) {
-        createGeodesicLineWithLabel(
-          data['path_pts'],
-          scene
-        )
-      }
-    })
-    .catch(error => {
-      console.error(error);
-    }); 
+export function circumference_service(markers, scene, mesh){
+  if(markers.length === 3){
+    const data = circumf_from_plane(markers, mesh)
+    createGeodesicLineWithLabel(
+      data,
+      scene
+    )
   }
   else{
-    console.log("Need at least 4 points to make a stable, nontrival circumference!")
+    console.log("Can only work with three points for circumference implementation!")
   }
-
-
 }
 
 export function geodesic_service2(markers, scene){
@@ -427,6 +402,7 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
         `\t it has this position ${positionKey}`
         )
       */
+     /*
     }
     else{
       closestVertexIndex = -1;
@@ -489,6 +465,7 @@ export function geodesic_service(THREE, loadedObject, event, handleClicks, marke
         `start: ${vertexInfo.vertexId1}, end: ${vertexInfo.vertexId2}`
       )
       */
+     /*
     }
     // note loadedObject is the same as intersects[...].object
   }
