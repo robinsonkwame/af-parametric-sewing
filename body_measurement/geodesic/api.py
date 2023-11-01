@@ -92,13 +92,13 @@ async def solve_loop_path(v_list: str):
     try:
         v_list_int = [int(x) for x in v_list.split(',')]
 
-        v_list_int.append(
-            v_list_int[1] # to force a loop back to the start 
-        ) 
+        # v_list_int.append(
+        #     v_list_int[1] # to force a loop back to the start 
+        # ) 
 
         # Solve the path
         logging.info(f"Starting the loop solver ... ")
-        path_pts = path_solver.find_geodesic_path_poly(v_list=v_list_int) # find_geodesic_loop(v_list=v_list_int)
+        path_pts = path_solver.find_geodesic_path_poly(v_list=v_list_int) # find_geodesic_path_poly(v_list=v_list_int)
         logging.info(f"Finished the loop solver ... ")
 
         # Convert path_pts (a numpy array) to a list so that it can be returned as JSON

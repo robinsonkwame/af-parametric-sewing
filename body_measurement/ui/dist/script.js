@@ -276,8 +276,8 @@ window.addEventListener('click', (event) => {
   const hitMesh = intersections.length > 0;
   const oneSphereExists = markers.length == 1;
   const twoSpheresExist = markers.length == 2;
-  const canAddSphere = markers.length < 3
-  const resetSpeheres = markers.length >= 3
+  const canAddSphere = true //markers.length < 3 + 1
+  const resetSpeheres = false //markers.length >= 3 + 1
 
   if (isCircumferenceMode) {
     if (hitMesh && canAddSphere){ // Case 1
