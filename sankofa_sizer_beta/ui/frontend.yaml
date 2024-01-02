@@ -1,0 +1,196 @@
+openapi: "3.0.0"
+info:
+  title: "Anthropometric Measurement Frontend API"
+  version: "1.0.4"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    BodyPart:
+      type: string
+      enum:
+        - pelvis
+        - rightLeg
+        - leftLeg
+        - rightUpperArm
+        - leftUpperArm
+        - neck
+        - eyes
+        - nose
+        - rightHand
+        - leftHand
+        - rightFoot
+        - leftFoot
+        - chest
+        - back
+        - head
+        - all
+    ImageWithBodyParts:
+      type: object
+      properties:
+        image:
+          type: string
+          format: binary
+        bodyParts:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyPart'
+
+security:
+  - BearerAuth: []
+
+paths:
+  /login:
+    post:
+      summary: "Authenticates users and returns a JWT token"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: "Login successful"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: "JWT token for session authentication"
+
+  /upload-images:
+    post:
+      summary: "Uploads multiple images for processing with optional text notes"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagesWithBodyParts:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ImageWithBodyParts'
+                notes:
+                  type: string
+                  description: "Optional text notes related to the images"
+      responses:
+        '200':
+          description: "Images and notes uploaded successfully"
+
+  /notify-users:
+    post:
+      summary: "Notifies other users about projects involving specific anthropometric measurements"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectId:
+                  type: string
+                  description: "Identifier of the project"
+                message:
+                  type: string
+                  description: "Notification message to be sent"
+      responses:
+        '200':
+          description: "Users notified successfully"
+
+  /choose-images:
+    post:
+      summary: "Selects or deselects images for processing and assigns primary body parts"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageSelections:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      imageId:
+                        type: string
+                        description: "Unique identifier for the image"
+                      isSelected:
+                        type: boolean
+                        description: "Indicates whether the image is selected for processing"
+                      bodyPartsRepresented:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ImageWithBodyParts'
+      responses:
+        '200':
+          description: "Image selections updated successfully"
+
+  /choose-algorithms:
+    post:
+      summary: "Selects algorithms for body part/entire body creation"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                algorithms:
+                  type: array
+                  items:
+                    type: string
+                  description: "List of algorithms to use for processing"
+      responses:
+        '200':
+          description: "Algorithms selected successfully"
+
+  /download-status:
+    get:
+      summary: "Gets the status of the processing and download URL"
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: "Processing status and download URL"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kind:
+                    type: string
+                    enum: ["mesh", "point cloud", "depth map"]
+                  status:
+                    type: string
+                    enum: [ "notStarted", "pending", "finished" ]
+                  downloadUrl:
+                    type: string
+                    nullable: true
+                    description: "URL for the outputs, available if status is 'finished'"
+                  bodyPartsRepresented:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImageWithBodyParts'
