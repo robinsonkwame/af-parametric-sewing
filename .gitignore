@@ -3,6 +3,9 @@ data/
 
 notes
 
+# next stuff
+.next/
+
 # ui/javascript related
 node_modules/
 

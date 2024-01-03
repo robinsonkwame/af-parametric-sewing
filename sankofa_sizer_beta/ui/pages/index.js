@@ -24,7 +24,7 @@ const IndexPage = () => {
             <button className="m-3 px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
               Pattern
             </button>
-          </Link>
+        </Link>
         </div>
       </main>
     </div>
