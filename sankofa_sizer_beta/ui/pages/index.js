@@ -15,15 +15,15 @@ const IndexPage = () => {
 
         <div className="flex mt-6">
           <Link href="/body-measurement">
-            <a className="m-3 px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <button className="m-3 px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
               Body Measurement
-            </a>
+            </button>
           </Link>
 
           <Link href="/pattern">
-            <a className="m-3 px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <button className="m-3 px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
               Pattern
-            </a>
+            </button>
           </Link>
         </div>
       </main>
