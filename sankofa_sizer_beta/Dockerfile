@@ -4,13 +4,38 @@ FROM node:18
 # Set the working directory in the container to /app
 WORKDIR /app
 
-# Install T3 stack dependencies
-RUN npm install next next-auth prisma tailwindcss @trpc/server @trpc/react
+# Copy package.json (and package-lock.json if available) into the image
+COPY ./app/package.json ./
 
-# Map the ui directory
-VOLUME [ "/app" ]
+# Install dependencies
+RUN npm install
+
+# Copy the rest of your app's source code from your host to your image filesystem.
+COPY ./app .
+
+# Expose the port the app runs on
+EXPOSE 3000
 
 CMD ["npm", "run", "dev"]
 
-# to use:
-# docker build -t ui_sankofa_sizer . && docker run -it --rm -p 3000:3000 --name sankofa-sizer -v $(pwd)/ui:/app ui_sankofa_sizer
+
+# # Use the official Node.js 18 image as the base
+# FROM node:18
+
+# # Set the working directory in the container
+# WORKDIR /app
+
+# # Initialize a new Next.js TypeScript project
+# RUN npx create-next-app@latest --ts .
+
+# # Copy the OpenAPI-generated client library
+# COPY ./client ../client
+
+# # Copy your Next.js pages
+# COPY ./app/pages ./pages
+
+# # Expose the port that Next.js will run on
+# EXPOSE 3000
+
+# # Run the development server
+# CMD ["npm", "run", "dev"]
