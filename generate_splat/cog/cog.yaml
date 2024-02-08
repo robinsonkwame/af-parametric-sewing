@@ -1,0 +1,38 @@
+build:
+  gpu: true
+  python_version: "3.9"
+  python_packages:
+    - "nerfstudio==1.0.1"
+    - "torch"
+    - "torchvision"
+    - "gdown"
+    - "numpy"
+    - "typing_extensions"
+predict: "predict.py:Predictor"
+#   system_packages:
+#     - "ffmpeg"
+#     - "git"
+#     - "cmake"
+#     - "build-essential"
+#     - "libboost-program-options-dev" 
+#     - "libboost-filesystem-dev"
+#     - "libboost-graph-dev" 
+#     - "libboost-system-dev" 
+#     - "libboost-test-dev" 
+#     - "libeigen3-dev" 
+#     - "libsuitesparse-dev" 
+#     - "libfreeimage-dev" 
+#     - "libmetis-dev" 
+#     - "libgoogle-glog-dev" 
+#     - "libgflags-dev" 
+#     - "libglew-dev" 
+#     - "qtbase5-dev" 
+#     - "libqt5opengl5-dev" 
+#     - "libcgal-dev"
+#     - "libatlas-base-dev" 
+#     - "libsuitesparse-dev"
+#   run:
+#     - git clone https://ceres-solver.googlesource.com/ceres-solver --branch 2.1.0 && cd ceres-solver && mkdir build && cd build && cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF && make -j4 && make install && cd ../../
+#     - git clone https://github.com/colmap/colmap.git --branch 3.7 && cd colmap && mkdir build && cd build && cmake .. && make -j4 && make install && cd ../../
+# predict: "predict.py:Predictor"
+# image: "r8.im/jimothyjohn/colmap"
