@@ -50,6 +50,7 @@ build:
     - su user
     - cd /home/user
     - export PATH="${PATH}:/home/user/.local/bin"
+    # CLONE NERFSTUDIO 1.0.1
     - git clone https://github.com/nerfstudio-project/nerfstudio.git --branch v1.0.1 --single-branch
     - python -m pip install --no-cache-dir --upgrade pip setuptools pathtools promise pybind11
     - export CUDA_VER=11.8 && CUDA_VER=118 && python -m pip install --no-cache-dir torch==2.0.1+cu${CUDA_VER} torchvision==0.15.2+cu${CUDA_VER} --extra-index-url https://download.pytorch.org/whl/cu${CUDA_VER}
@@ -60,8 +61,7 @@ build:
     # SKIP Pixel Perfect SfM
     - python -m pip install --no-cache-dir omegaconf
     - su root
-    - chown -R user /home/user/nerfstudio
+    - chown -R user /nerfstudio
     - su user
-    - cd nerfstudio && python -m pip install --no-cache-dir -e . && cd ..
-    - ns-install-cli --mode install
-
+    - /bin/bash -c "export PATH=\"${PATH}:/home/user/.local/bin\" && cd nerfstudio && python -m pip install --no-cache-dir -e . && cd .."
+    #- /bin/bash -c "ns-install-cli --mode install"
