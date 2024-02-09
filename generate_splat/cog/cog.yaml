@@ -56,13 +56,12 @@ build:
     - export TCNN_CUDA_ARCHITECTURES=75 && python -m pip install --no-cache-dir git+https://github.com/NVlabs/tiny-cuda-nn.git@v1.6#subdirectory=bindings/torch
     - git clone --branch v0.4.0 --recursive https://github.com/colmap/pycolmap.git && cd pycolmap && python -m pip install --no-cache-dir . && cd ..
     - git clone --branch master --recursive https://github.com/cvg/Hierarchical-Localization.git && cd Hierarchical-Localization && git checkout v1.4 && python -m pip install --no-cache-dir -e . && cd ..
-    - git clone --branch v1.0 --recursive https://github.com/cvg/pyceres.git && cd pyceres && \
-    python3.10 -m pip install --no-cache-dir -e . && cd ..
+    - git clone --branch v1.0 --recursive https://github.com/cvg/pyceres.git && cd pyceres && python -m pip install --no-cache-dir -e . && cd ..
     # SKIP Pixel Perfect SfM
     - python -m pip install --no-cache-dir omegaconf
     - su root
     - chown -R user /home/user/nerfstudio
     - su user
-    - cd nerfstudio && python3.10 -m pip install --no-cache-dir -e . && cd ..
+    - cd nerfstudio && python -m pip install --no-cache-dir -e . && cd ..
     - ns-install-cli --mode install
 
