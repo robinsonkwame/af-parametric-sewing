@@ -3,6 +3,7 @@
 chmod 777 datasets cache workspace
 
 DATA_NAME=${1:-blender}
+CAPTURE_NAME=${2:-}
 
 docker run --gpus all \
             --user $(id -u):$(id -g) \
@@ -13,6 +14,8 @@ docker run --gpus all \
             --rm -it \
             --shm-size=12gb \
             dromni/nerfstudio:1.0.1 \
-            ns-download-data $DATA_NAME --save-dir /datasets
+            ns-download-data $DATA_NAME $CAPTURE_NAME --save-dir /datasets
+
+
 
 # docker run -it --user $(id -u):$(id -g) --rm -v $(pwd)/workspace:/workspace -v  $(pwd)/datasets:/datasets -v $(pwd)/cache:/home/user/.cache dromni/nerfstudio:1.0.1 bash
