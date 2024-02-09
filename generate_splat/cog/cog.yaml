@@ -50,18 +50,20 @@ build:
     - su user
     - cd /home/user
     - export PATH="${PATH}:/home/user/.local/bin"
-    # CLONE NERFSTUDIO 1.0.1
-    - git clone https://github.com/nerfstudio-project/nerfstudio.git --branch v1.0.1 --single-branch
     - python -m pip install --no-cache-dir --upgrade pip setuptools pathtools promise pybind11
-    - export CUDA_VER=11.8 && CUDA_VER=118 && python -m pip install --no-cache-dir torch==2.0.1+cu${CUDA_VER} torchvision==0.15.2+cu${CUDA_VER} --extra-index-url https://download.pytorch.org/whl/cu${CUDA_VER}
-    - export TCNN_CUDA_ARCHITECTURES=75 && python -m pip install --no-cache-dir git+https://github.com/NVlabs/tiny-cuda-nn.git@v1.6#subdirectory=bindings/torch
     - git clone --branch v0.4.0 --recursive https://github.com/colmap/pycolmap.git && cd pycolmap && python -m pip install --no-cache-dir . && cd ..
     - git clone --branch master --recursive https://github.com/cvg/Hierarchical-Localization.git && cd Hierarchical-Localization && git checkout v1.4 && python -m pip install --no-cache-dir -e . && cd ..
     - git clone --branch v1.0 --recursive https://github.com/cvg/pyceres.git && cd pyceres && python -m pip install --no-cache-dir -e . && cd ..
-    # SKIP Pixel Perfect SfM
+    - RUN git clone --recursive https://github.com/cvg/pixel-perfect-sfm.git && cd pixel-perfect-sfm && git reset --hard 40f7c1339328b2a0c7cf71f76623fb848e0c0357 && git clean -df && python3.10 -m pip install --no-cache-dir -e . && cd ..
     - python -m pip install --no-cache-dir omegaconf
-    - su root
-    - chown -R user /nerfstudio
-    - su user
-    - /bin/bash -c "export PATH=\"${PATH}:/home/user/.local/bin\" && cd nerfstudio && python -m pip install --no-cache-dir -e . && cd .."
-    #- /bin/bash -c "ns-install-cli --mode install"
+    - export CUDA_VER=11.8 && CUDA_VER=118 && python -m pip install --no-cache-dir torch==2.0.1+cu${CUDA_VER} torchvision==0.15.2+cu${CUDA_VER} --extra-index-url https://download.pytorch.org/whl/cu${CUDA_VER}
+    # Persist PATH, LD_LIBRARY_PATH to include CUDA, for TCNN, etc.
+    - echo 'export PATH="/usr/local/cuda-11.8/bin:$PATH"' >> /root/.bashrc
+    - echo 'export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH"' >> /root/.bashrc
+    - echo 'export TCNN_CUDA_ARCHITECTURES=75' >> /root/.bashrc
+    # Build tiny-cuda-nn
+    - git clone --recursive https://github.com/NVlabs/tiny-cuda-nn.git
+    - cd tiny-cuda-nn && export PATH="/usr/local/cuda-11.8/bin:$PATH" && export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH" && cmake . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build --config RelWithDebInfo -j
+    - cd tiny-cuda-nn/bindings/torch && export TCNN_CUDA_ARCHITECTURES=75 && export PATH="/usr/local/cuda-11.8/bin:$PATH" && export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH" && python setup.py install
+    - pip install nerfstudio=="1.0.1"
+    - ns-install-cli
