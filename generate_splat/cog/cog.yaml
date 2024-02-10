@@ -67,4 +67,14 @@ build:
     - cd tiny-cuda-nn && export PATH="/usr/local/cuda-11.8/bin:$PATH" && export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH" && cmake . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build --config RelWithDebInfo -j
     - cd tiny-cuda-nn/bindings/torch && export TCNN_CUDA_ARCHITECTURES=86 && export PATH="/usr/local/cuda-11.8/bin:$PATH" && export LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH" && python setup.py install
     - pip install nerfstudio=="1.0.1"
-    - ns-install-cli
+    - git clone --recursive https://github.com/cnr-isti-vclab/PyMeshLab.git
+    - DEBIAN_FRONTEND=noninteractive apt-get -y update
+    - cd PyMeshLab/ && cd scripts/Linux && chmod +x 0_setup_env.sh && yes | ./0_setup_env.sh
+    - pip uninstall pymeshlab -y
+    - cd PyMeshLab/ && cd scripts/Linux && chmod +x 1_build.sh && ./1_build.sh
+    #     - cd PyMeshLab/ && cd scripts/Linux && chmod +x 1_build.sh && ./1_build.sh --install_path=/root/.pyenv/versions/3.10.13/lib/python3.10/site-packages/
+    #- cd PyMeshLab && cd scripts/Linux && chmod +x 2_deploy.sh && ./2_deploy.sh 
+    #- pip uninstall -y pymeshlab && pip install pymeshlab=="v2022.2.post2" && python -c "import pymeshlab"
+    #- ns-install-cli
+    # - apt install qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools #apt-get update && apt-get install -y qt5-default
+    # - qmake --version
