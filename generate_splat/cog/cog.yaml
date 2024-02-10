@@ -75,3 +75,4 @@ build:
     - cd PyMeshLab/ && pip install . # installs PyMeshLab, avoids missing Qt5 symbol
     - echo 'export LD_LIBRARY_PATH="/root/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pymeshlab/lib/:/root/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pymeshlab/lib/config:$LD_LIBRARY_PATH"' >> /root/.bashrc # import pymeshlab can now find it's .so objects
     - ns-install-cli
+predict: "predict.py:Predictor"
