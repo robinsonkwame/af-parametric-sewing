@@ -77,3 +77,4 @@ build:
     - pip install gsplat
     - ns-install-cli
 predict: "predict.py:Predictor"
+image: "r8.im/robinsonkwame/nerfstudio-cli"
