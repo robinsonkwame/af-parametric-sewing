@@ -1,9 +1,13 @@
 import subprocess
+import os
 
-def run_nerfstudio():
-    command = "process.sh && train.sh"
-    #subprocess.run(command, shell=True, check=True)
-    # figure out end to end of script; I suspect the output will be in the same directory as predict
+def run_nerfstudio(directory, command_line):
+    # Change the working directory
+    os.chdir(directory)
+    
+    # Run the provided command line statement
+    subprocess.run(command_line, shell=True, check=True)
 
 if __name__ == "__main__":
-    run_nerfstudio()
+    # Example usage
+    run_nerfstudio("/path/to/directory", "nerfstudio process")
